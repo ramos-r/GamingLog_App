@@ -20,6 +20,9 @@
     "@prisma/client": "^6.19.3",
     "@vercel/blob": "^2.8.0"
   },
+  "prisma": {
+    "seed": "tsx --env-file=.env prisma/seed.ts"
+  },
   "devDependencies": {
     "typescript": "^5.7.3",
     "tsx": "^4.23.13",
