@@ -20,3 +20,25 @@ export interface LoginInput {
   username: string;
   password: string;
 }
+
+export interface CatalogGame {
+  id: string;
+  title: string;
+  genre: string | null;
+  coverUrl: string | null;
+  addedById: string | null;
+  createdAt: Date;
+}
+
+export interface CreateGameInput {
+  title: string;
+  genre?: string;
+  coverUrl?: string;
+}
+
+export type UpdateGameInput = Partial<CreateGameInput>;
+
+export interface DuplicateGameError {
+  error: string;
+  existingGame: CatalogGame;
+}
