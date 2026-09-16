@@ -37,6 +37,14 @@ Both connection strings come from the same Vercel Postgres/Neon database,
 under the project's Storage tab — Vercel surfaces both a pooled and a
 direct URL there.
 
+## Known placeholders
+
+- The `/login` and `/register` background (`.auth-background` in
+  `client/src/index.css`) is a CSS gradient standing in for the mockup's
+  fantasy-art background, which is copyrighted and not shipped (see
+  `CLAUDE.md` → Images). Swap it for a licensed image/illustration whenever
+  one is available.
+
 ## Other commands
 
 - `npm run build` — builds `shared`, then `client`, then `server`.

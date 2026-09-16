@@ -33,6 +33,16 @@
   .bg-accent-gradient {
     background-image: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-light) 100%);
   }
+
+  /* Auth pages' full-bleed background — a placeholder abstract glow standing
+     in for the mockup's (copyrighted) fantasy-art background. Swap for a
+     licensed image/illustration whenever one is available. */
+  .auth-background {
+    background:
+      radial-gradient(ellipse 70% 60% at 0% 100%, rgba(59, 130, 246, 0.35), transparent 60%),
+      radial-gradient(ellipse 50% 50% at 100% 0%, rgba(59, 130, 246, 0.12), transparent 60%),
+      var(--color-background);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
