@@ -42,3 +42,37 @@ export interface DuplicateGameError {
   error: string;
   existingGame: CatalogGame;
 }
+
+export type Category = "PLAYING" | "PLAYED_BEFORE" | "WANT_TO_PLAY";
+
+export interface LibraryEntry {
+  id: string;
+  category: Category;
+  platform: string | null;
+  rating: number | null;
+  isFavorite: boolean;
+  addedAt: Date;
+  updatedAt: Date;
+  game: CatalogGame;
+}
+
+export interface LibraryResponse {
+  playing: LibraryEntry[];
+  playedBefore: LibraryEntry[];
+  wantToPlay: LibraryEntry[];
+  favorites: LibraryEntry[];
+}
+
+export interface AddToLibraryInput {
+  gameId: string;
+  category: Category;
+  platform?: string;
+  rating?: number;
+}
+
+export interface UpdateLibraryInput {
+  category?: Category;
+  platform?: string | null;
+  rating?: number | null;
+  isFavorite?: boolean;
+}
