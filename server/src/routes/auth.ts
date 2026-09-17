@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { AUTH_COOKIE_NAME, authCookieOptions, hashPassword, signToken, verifyPassword } from "../lib/auth.js";
-import type { PublicUser } from "shared";
+import type { PublicUser, SocialLink } from "shared";
 
 export const authRouter = Router();
 
@@ -23,6 +23,7 @@ function toPublicUser(user: {
   bio: string | null;
   avatarUrl: string | null;
   createdAt: Date;
+  socialLinks?: SocialLink[];
 }): PublicUser {
   return {
     id: user.id,
@@ -30,6 +31,7 @@ function toPublicUser(user: {
     bio: user.bio,
     avatarUrl: user.avatarUrl,
     createdAt: user.createdAt,
+    socialLinks: user.socialLinks ?? [],
   };
 }
 
@@ -63,7 +65,7 @@ authRouter.post("/login", async (req, res) => {
   }
   const { username, password } = parsed.data;
 
-  const user = await prisma.user.findUnique({ where: { username } });
+  const user = await prisma.user.findUnique({ where: { username }, include: { socialLinks: true } });
   const validPassword = user ? await verifyPassword(password, user.passwordHash) : false;
 
   if (!user || !validPassword) {
@@ -82,7 +84,7 @@ authRouter.post("/logout", (_req, res) => {
 });
 
 authRouter.get("/me", requireAuth, async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { id: req.userId } });
+  const user = await prisma.user.findUnique({ where: { id: req.userId }, include: { socialLinks: true } });
   if (!user) {
     res.status(401).json({ error: "Not authenticated" });
     return;

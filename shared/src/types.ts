@@ -3,12 +3,19 @@
 // client bundle never needs that package on its module graph. Update these
 // alongside schema.prisma when a field changes.
 
+export interface SocialLink {
+  id: string;
+  platform: string;
+  handle: string;
+}
+
 export interface PublicUser {
   id: string;
   username: string;
   bio: string | null;
   avatarUrl: string | null;
   createdAt: Date;
+  socialLinks: SocialLink[];
 }
 
 export interface RegisterInput {

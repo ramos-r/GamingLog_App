@@ -1,17 +1,60 @@
+import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
+import type { LibraryResponse } from "shared";
 import { useAuth } from "../hooks/use-auth";
+import { apiFetch } from "../lib/api";
+import { ProfileHeader } from "../components/profile-header";
+import { FavoritesRow } from "../components/favorites-row";
+import { CategorySection } from "../components/category-section";
 
 export function HomePage() {
   const { user, logout } = useAuth();
+  const [library, setLibrary] = useState<LibraryResponse | null>(null);
+
+  useEffect(() => {
+    apiFetch<LibraryResponse>("/library").then(setLibrary);
+  }, []);
+
+  if (!user || !library) {
+    return null;
+  }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background text-text">
-      <h1 className="text-xl font-bold">Logged in as {user?.username}</h1>
-      <p className="text-sm text-muted">Profile page comes together in Phase 7.</p>
+    <main className="min-h-screen bg-background pb-24 text-text">
+      <div className="flex justify-end px-4 pt-3 sm:px-8">
+        <button type="button" onClick={() => void logout()} className="text-xs text-muted transition-colors hover:text-text">
+          Log out
+        </button>
+      </div>
+
+      <ProfileHeader user={user} />
+
+      <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8 sm:px-8">
+        <FavoritesRow favorites={library.favorites} />
+        <CategorySection
+          title="Playing"
+          entries={library.playing}
+          emptyMessage="Nothing here yet — add a game to get started."
+        />
+        <CategorySection
+          title="Played Before"
+          entries={library.playedBefore}
+          emptyMessage="Nothing here yet — add a game to get started."
+        />
+        <CategorySection
+          title="Want to Play"
+          entries={library.wantToPlay}
+          emptyMessage="Nothing here yet — add a game to get started."
+        />
+      </div>
+
+      {/* Wired up in Phase 8 (add/search game flow). */}
       <button
-        onClick={() => void logout()}
-        className="rounded-full bg-accent-gradient px-6 py-2 text-sm font-medium text-accent-foreground transition-colors"
+        type="button"
+        aria-label="Add game"
+        className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-accent-gradient text-accent-foreground shadow-2xl transition-transform hover:scale-105"
       >
-        LOG OUT
+        <Plus className="h-6 w-6" />
       </button>
     </main>
   );
