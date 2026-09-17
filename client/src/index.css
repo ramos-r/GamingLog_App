@@ -8,13 +8,18 @@
   --color-subtle: #2a2b31; /* border-subtle */
   --color-text: #f2f2f3;
   --color-muted: #9a9ba3; /* text-muted */
+  --color-placeholder: #636363; /* input placeholder text */
   --color-accent: #3b82f6;
   --color-accent-light: #60a5fa;
   --color-accent-foreground: #ffffff;
   --color-destructive: #ef4444;
   --color-favorite-badge: var(--color-accent);
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Montserrat: placeholders, category titles, links, descriptions, the
+     login screen's "welcome to your" text — the default body font. */
+  --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  /* Baloo 2: usernames, game titles, buttons, the "Gaming Log" wordmark. */
+  --font-baloo: "Baloo 2", ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
@@ -29,9 +34,9 @@
     background-image: linear-gradient(180deg, #272727 0%, #1b1b1b 100%);
   }
 
-  /* Primary buttons ("LOG IN"), matches the accent token's gradient value. */
+  /* Primary buttons ("LOG IN") — horizontal, light-to-dark left to right. */
   .bg-accent-gradient {
-    background-image: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-light) 100%);
+    background-image: linear-gradient(to right, var(--color-accent-light) 0%, var(--color-accent) 100%);
   }
 
   /* Auth pages' full-bleed background — a placeholder abstract glow standing
@@ -42,6 +47,23 @@
       radial-gradient(ellipse 70% 60% at 0% 100%, rgba(59, 130, 246, 0.35), transparent 60%),
       radial-gradient(ellipse 50% 50% at 100% 0%, rgba(59, 130, 246, 0.12), transparent 60%),
       var(--color-background);
+  }
+
+  /* Subtle film-grain texture — layered over the auth card's translucent
+     surface so it reads as frosted glass rather than a flat dark panel. */
+  .bg-noise {
+    position: relative;
+    isolation: isolate;
+  }
+  .bg-noise::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 }
 

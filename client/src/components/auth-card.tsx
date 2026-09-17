@@ -41,15 +41,17 @@ export function AuthCard({ mode }: AuthCardProps) {
   }
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-subtle bg-surface/70 p-8 shadow-2xl backdrop-blur-sm">
-      <div className="mb-6 text-center">
+    <div className="bg-noise w-full max-w-sm rounded-2xl border border-subtle bg-surface/35 p-8 shadow-2xl backdrop-blur-md">
+      <div className="mb-6 text-center leading-tight">
         <p className="text-sm text-muted">{mode === "login" ? "welcome to your" : "create your"}</p>
-        <h1 className="bg-accent-gradient bg-clip-text text-3xl font-bold text-transparent">Gaming Log</h1>
+        <h1 className="-mt-0.5 bg-accent-gradient bg-clip-text font-baloo text-3xl font-bold text-transparent">
+          Gaming Log
+        </h1>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
-          className="input-surface rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-muted"
+          className="input-surface rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-placeholder"
           placeholder="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -57,7 +59,7 @@ export function AuthCard({ mode }: AuthCardProps) {
           required
         />
         <input
-          className="input-surface rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-muted"
+          className="input-surface rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-placeholder"
           placeholder="password"
           type="password"
           value={password}
@@ -67,7 +69,7 @@ export function AuthCard({ mode }: AuthCardProps) {
         />
         {mode === "register" && (
           <input
-            className="input-surface rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-muted"
+            className="input-surface rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-placeholder"
             placeholder="confirm password"
             type="password"
             value={confirmPassword}
@@ -82,7 +84,7 @@ export function AuthCard({ mode }: AuthCardProps) {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="mt-2 rounded-full bg-accent-gradient py-2.5 text-sm font-semibold tracking-wide text-accent-foreground transition-colors disabled:opacity-50"
+          className="mt-2 rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold tracking-wide text-accent-foreground transition-colors disabled:opacity-50"
         >
           {mode === "login" ? "LOG IN" : "CREATE ACCOUNT"}
         </button>
@@ -92,14 +94,14 @@ export function AuthCard({ mode }: AuthCardProps) {
         {mode === "login" ? (
           <Link
             to="/register"
-            className="rounded-full border border-subtle py-2.5 text-center text-sm font-semibold tracking-wide text-muted transition-colors hover:text-text"
+            className="rounded-full border border-subtle py-2.5 text-center font-baloo text-sm font-bold tracking-wide text-muted transition-colors hover:text-text"
           >
             CREATE ACCOUNT
           </Link>
         ) : (
           <Link
             to="/login"
-            className="rounded-full border border-subtle py-2.5 text-center text-sm font-semibold tracking-wide text-muted transition-colors hover:text-text"
+            className="rounded-full border border-subtle py-2.5 text-center font-baloo text-sm font-bold tracking-wide text-muted transition-colors hover:text-text"
           >
             LOG IN
           </Link>
