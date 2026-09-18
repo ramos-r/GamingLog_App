@@ -75,6 +75,7 @@ export interface AddToLibraryInput {
   category: Category;
   platform?: string;
   rating?: number;
+  isFavorite?: boolean;
 }
 
 export interface UpdateLibraryInput {
@@ -82,4 +83,20 @@ export interface UpdateLibraryInput {
   platform?: string | null;
   rating?: number | null;
   isFavorite?: boolean;
+}
+
+export interface IgdbSuggestion {
+  title: string;
+  genre: string | null;
+  coverUrl: string | null;
+  platforms: string[];
+}
+
+export interface UploadInput {
+  filename: string;
+  dataUrl: string;
+}
+
+export interface UploadResponse {
+  url: string;
 }

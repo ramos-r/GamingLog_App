@@ -13,6 +13,7 @@ const addToLibrarySchema = z.object({
   category: categorySchema,
   platform: z.string().min(1).max(50).optional(),
   rating: z.number().int().min(1).max(5).optional(),
+  isFavorite: z.boolean().optional(),
 });
 
 const updateLibrarySchema = z.object({
@@ -46,7 +47,7 @@ libraryRouter.post("/", async (req, res) => {
     return;
   }
   const userId = req.userId!;
-  const { gameId, category, platform, rating } = parsed.data;
+  const { gameId, category, platform, rating, isFavorite } = parsed.data;
 
   const game = await prisma.game.findUnique({ where: { id: gameId } });
   if (!game) {
@@ -63,7 +64,7 @@ libraryRouter.post("/", async (req, res) => {
   }
 
   const entry = await prisma.userGame.create({
-    data: { userId, gameId, category, platform, rating },
+    data: { userId, gameId, category, platform, rating, isFavorite },
     include: { game: true },
   });
   res.status(201).json(entry);

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { searchIgdbGames } from "../lib/igdb.js";
 
 export const catalogRouter = Router();
 
@@ -27,6 +28,14 @@ catalogRouter.get("/", async (req, res) => {
   });
 
   res.json(games);
+});
+
+// Must come before "/:id" — otherwise Express would match "external-search"
+// as an :id param.
+catalogRouter.get("/external-search", async (req, res) => {
+  const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  const suggestions = query ? await searchIgdbGames(query) : [];
+  res.json(suggestions);
 });
 
 catalogRouter.get("/:id", async (req, res) => {
