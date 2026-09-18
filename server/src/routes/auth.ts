@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { AUTH_COOKIE_NAME, authCookieOptions, hashPassword, signToken, verifyPassword } from "../lib/auth.js";
-import type { PublicUser, SocialLink } from "shared";
+import { toPublicUser } from "../lib/users.js";
 
 export const authRouter = Router();
 
@@ -16,24 +16,6 @@ const loginSchema = z.object({
   username: z.string(),
   password: z.string(),
 });
-
-function toPublicUser(user: {
-  id: string;
-  username: string;
-  bio: string | null;
-  avatarUrl: string | null;
-  createdAt: Date;
-  socialLinks?: SocialLink[];
-}): PublicUser {
-  return {
-    id: user.id,
-    username: user.username,
-    bio: user.bio,
-    avatarUrl: user.avatarUrl,
-    createdAt: user.createdAt,
-    socialLinks: user.socialLinks ?? [],
-  };
-}
 
 authRouter.post("/register", async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);

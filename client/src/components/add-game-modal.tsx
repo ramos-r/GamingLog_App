@@ -2,11 +2,11 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "r
 import type { CatalogGame, Category, IgdbSuggestion } from "shared";
 import { apiFetch, ApiError } from "../lib/api";
 import { uploadFile } from "../lib/upload";
+import { PLATFORM_OPTIONS } from "../lib/platforms";
 import { Modal } from "./modal";
 import { GameCover } from "./game-cover";
 import { StarRatingInput } from "./star-rating-input";
 
-const PLATFORM_OPTIONS = ["PC", "Steam", "PlayStation", "Xbox", "Switch", "Other"];
 const CATEGORY_OPTIONS: { value: Category; label: string }[] = [
   { value: "PLAYING", label: "Playing" },
   { value: "PLAYED_BEFORE", label: "Played Before" },

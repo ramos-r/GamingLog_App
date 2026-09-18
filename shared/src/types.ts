@@ -100,3 +100,15 @@ export interface UploadInput {
 export interface UploadResponse {
   url: string;
 }
+
+export interface UpdateUserInput {
+  username?: string;
+  password?: string;
+  bio?: string | null;
+  avatarUrl?: string | null;
+}
+
+export interface SocialLinkInput {
+  platform: string;
+  handle: string;
+}

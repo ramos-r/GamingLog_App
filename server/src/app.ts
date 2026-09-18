@@ -5,6 +5,7 @@ import { authRouter } from "./routes/auth.js";
 import { catalogRouter } from "./routes/catalog.js";
 import { libraryRouter } from "./routes/library.js";
 import { uploadsRouter } from "./routes/uploads.js";
+import { usersRouter } from "./routes/users.js";
 
 export const app = express();
 
@@ -22,3 +23,4 @@ app.use("/api/auth", authRouter);
 app.use("/api/catalog", catalogRouter);
 app.use("/api/library", libraryRouter);
 app.use("/api/uploads", uploadsRouter);
+app.use("/api/users", usersRouter);
