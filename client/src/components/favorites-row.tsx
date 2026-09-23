@@ -1,46 +1,125 @@
-import { useRef } from "react";
-import { ChevronRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, Plus } from "lucide-react";
+import { useDroppable } from "@dnd-kit/core";
 import type { LibraryEntry } from "shared";
 import { GameCover } from "./game-cover";
+import { ManageFavoritesModal } from "./manage-favorites-modal";
+
+export const FAVORITES_DROP_ID = "FAVORITES";
 
 interface FavoritesRowProps {
   favorites: LibraryEntry[];
+  onAddGame: () => void;
+  onChanged: () => void;
 }
 
-export function FavoritesRow({ favorites }: FavoritesRowProps) {
+export function FavoritesRow({ favorites, onAddGame, onChanged }: FavoritesRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLElement | null)[]>([]);
+  const { setNodeRef, isOver } = useDroppable({ id: FAVORITES_DROP_ID });
+  const [isManageOpen, setIsManageOpen] = useState(false);
+
+  // Favorites + the trailing "add a game" slot, treated as one looping sequence.
+  const itemCount = favorites.length + 1;
+  // Truncate stale refs from a previous, longer render so index math below
+  // never reads a detached node's (always-zero) offsetLeft.
+  useEffect(() => {
+    itemRefs.current.length = itemCount;
+  }, [itemCount]);
+
+  function currentIndex(container: HTMLDivElement): number {
+    for (let i = 0; i < itemRefs.current.length; i++) {
+      const item = itemRefs.current[i];
+      if (item && item.offsetLeft >= container.scrollLeft - 4) return i;
+    }
+    return itemCount - 1;
+  }
+
+  function scrollToIndex(index: number) {
+    const wrapped = ((index % itemCount) + itemCount) % itemCount;
+    itemRefs.current[wrapped]?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+  }
 
   function scrollNext() {
-    scrollRef.current?.scrollBy({ left: 240, behavior: "smooth" });
+    const el = scrollRef.current;
+    if (!el) return;
+    const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+    scrollToIndex(atEnd ? 0 : currentIndex(el) + 1);
+  }
+
+  function scrollPrev() {
+    const el = scrollRef.current;
+    if (!el) return;
+    const atStart = el.scrollLeft <= 4;
+    scrollToIndex(atStart ? itemCount - 1 : currentIndex(el) - 1);
   }
 
   return (
     <section>
-      <h2 className="mb-3 text-lg font-bold">Favorites</h2>
-      {favorites.length === 0 ? (
-        <p className="text-sm text-muted">No favorites yet — star a game from your library to feature it here.</p>
-      ) : (
-        <div className="relative rounded-lg bg-surface p-4">
-          <div ref={scrollRef} className="flex gap-3 overflow-x-auto scroll-smooth">
-            {favorites.map((entry) => (
-              <GameCover
-                key={entry.id}
-                coverUrl={entry.game.coverUrl}
-                title={entry.game.title}
-                className="w-24 shrink-0 sm:w-28"
-              />
-            ))}
-          </div>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-lg font-bold">Favorites</h2>
+        {favorites.length > 0 && (
           <button
             type="button"
-            onClick={scrollNext}
-            aria-label="Show more favorites"
-            className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full bg-surface-raised p-2 text-text transition-colors hover:text-accent-light sm:flex"
+            onClick={() => setIsManageOpen(true)}
+            aria-label="Manage favorites"
+            className="rounded-full p-1 text-muted transition-colors hover:text-text"
           >
-            <ChevronRight className="h-5 w-5" />
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+      <div ref={setNodeRef} className={`relative rounded-lg bg-surface p-4 transition-colors ${isOver ? "bg-surface-raised/60" : ""}`}>
+        <div ref={scrollRef} className="no-scrollbar flex gap-3 overflow-x-auto scroll-smooth">
+          {favorites.map((entry, index) => (
+            <div
+              key={entry.id}
+              ref={(el) => {
+                itemRefs.current[index] = el;
+              }}
+            >
+              <GameCover coverUrl={entry.game.coverUrl} title={entry.game.title} className="w-24 shrink-0 sm:w-28" />
+            </div>
+          ))}
+          <button
+            ref={(el) => {
+              itemRefs.current[favorites.length] = el;
+            }}
+            type="button"
+            onClick={onAddGame}
+            aria-label="Add a game to your favorites"
+            className="flex aspect-3/4 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed border-subtle text-muted transition-colors hover:text-text sm:w-28"
+          >
+            <Plus className="h-6 w-6" />
           </button>
         </div>
-      )}
+        {itemCount > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={scrollPrev}
+              aria-label="Previous favorite"
+              className="absolute left-2 top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full bg-surface-raised p-2 text-text transition-colors hover:text-accent-light sm:flex"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={scrollNext}
+              aria-label="Next favorite"
+              className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full bg-surface-raised p-2 text-text transition-colors hover:text-accent-light sm:flex"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </>
+        )}
+      </div>
+      <ManageFavoritesModal
+        open={isManageOpen}
+        onClose={() => setIsManageOpen(false)}
+        favorites={favorites}
+        onChanged={onChanged}
+      />
     </section>
   );
 }

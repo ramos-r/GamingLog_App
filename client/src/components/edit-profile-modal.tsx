@@ -1,11 +1,15 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { UserRound, X } from "lucide-react";
 import type { PublicUser, SocialLink } from "shared";
 import { apiFetch, ApiError } from "../lib/api";
 import { uploadFile } from "../lib/upload";
 import { SOCIAL_PLATFORM_OPTIONS } from "../lib/social-platforms";
+import { useAuth } from "../hooks/use-auth";
 import { Modal } from "./modal";
 import { SocialPlatformSelect } from "./social-platform-select";
+
+const BIO_MAX_LENGTH = 280;
 
 interface EditProfileModalProps {
   open: boolean;
@@ -34,14 +38,20 @@ interface EditProfileFormProps {
 }
 
 function EditProfileForm({ user, onUpdated, onClose }: EditProfileFormProps) {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl);
   const [username, setUsername] = useState(user.username);
   const [password, setPassword] = useState("");
+  const [bio, setBio] = useState(user.bio ?? "");
   const [links, setLinks] = useState<LinkRow[]>(user.socialLinks.map((link) => ({ ...link })));
   const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function handleAvatarUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -78,7 +88,10 @@ function EditProfileForm({ user, onUpdated, onClose }: EditProfileFormProps) {
   }
 
   function addLink() {
-    setLinks((prev) => [...prev, { id: crypto.randomUUID(), platform: SOCIAL_PLATFORM_OPTIONS[0], handle: "", isNew: true }]);
+    setLinks((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), platform: SOCIAL_PLATFORM_OPTIONS[0], handle: "", order: prev.length, isNew: true },
+    ]);
   }
 
   function updateLink(id: string, patch: Partial<Pick<LinkRow, "platform" | "handle">>) {
@@ -120,9 +133,10 @@ function EditProfileForm({ user, onUpdated, onClose }: EditProfileFormProps) {
         }
       }
 
-      const changes: { username?: string; password?: string } = {};
+      const changes: { username?: string; password?: string; bio?: string | null } = {};
       if (username !== user.username) changes.username = username;
       if (password) changes.password = password;
+      if (bio !== (user.bio ?? "")) changes.bio = bio || null;
 
       const updated =
         Object.keys(changes).length > 0
@@ -135,6 +149,19 @@ function EditProfileForm({ user, onUpdated, onClose }: EditProfileFormProps) {
       setError(err instanceof ApiError ? err.message : "Something went wrong");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleteError(null);
+    setIsDeleting(true);
+    try {
+      await apiFetch("/users/me", { method: "DELETE" });
+      await logout();
+      navigate("/login");
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : "Something went wrong");
+      setIsDeleting(false);
     }
   }
 
@@ -164,7 +191,11 @@ function EditProfileForm({ user, onUpdated, onClose }: EditProfileFormProps) {
             />
           </label>
           {avatarUrl && (
-            <button type="button" onClick={() => void handleRemoveAvatar()} className="text-xs text-destructive">
+            <button
+              type="button"
+              onClick={() => void handleRemoveAvatar()}
+              className="text-xs text-destructive transition-opacity hover:opacity-80"
+            >
               Remove
             </button>
           )}
@@ -187,6 +218,18 @@ function EditProfileForm({ user, onUpdated, onClose }: EditProfileFormProps) {
         onChange={(e) => setPassword(e.target.value)}
         minLength={8}
       />
+
+      <div className="flex flex-col gap-1">
+        <textarea
+          rows={2}
+          value={bio}
+          maxLength={BIO_MAX_LENGTH}
+          onChange={(e) => setBio(e.target.value)}
+          placeholder="Bio"
+          className="input-surface w-full break-words rounded-lg px-3 py-2 text-sm text-text placeholder:text-placeholder"
+        />
+        <span className="text-xs text-muted">{BIO_MAX_LENGTH - bio.length} characters remaining</span>
+      </div>
 
       <div className="flex flex-col gap-2">
         <p className="text-xs text-muted">Social links</p>
@@ -211,7 +254,11 @@ function EditProfileForm({ user, onUpdated, onClose }: EditProfileFormProps) {
             </button>
           </div>
         ))}
-        <button type="button" onClick={addLink} className="self-start text-xs font-medium text-accent-light">
+        <button
+          type="button"
+          onClick={addLink}
+          className="self-start text-xs font-medium text-accent-light transition-colors hover:text-accent"
+        >
           + Add platform
         </button>
       </div>
@@ -222,18 +269,54 @@ function EditProfileForm({ user, onUpdated, onClose }: EditProfileFormProps) {
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted"
+          className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted transition-colors hover:text-text"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex-1 rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold text-accent-foreground disabled:opacity-50"
+          className="flex-1 rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold text-accent-foreground transition-transform hover:scale-105 disabled:opacity-50"
         >
           Save changes
         </button>
       </div>
+
+      <hr className="my-1 border-subtle" />
+
+      {isConfirmingDelete ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-text">
+            Delete your account? This permanently removes your profile, library, and social links.
+          </p>
+          {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setIsConfirmingDelete(false)}
+              className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted transition-colors hover:text-text"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDeleteAccount()}
+              disabled={isDeleting}
+              className="flex-1 rounded-full bg-destructive py-2.5 font-baloo text-sm font-bold text-white transition-transform hover:scale-105 disabled:opacity-50"
+            >
+              Yes, delete account
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsConfirmingDelete(true)}
+          className="self-start text-sm font-medium text-destructive transition-opacity hover:opacity-80"
+        >
+          Delete account
+        </button>
+      )}
     </form>
   );
 }

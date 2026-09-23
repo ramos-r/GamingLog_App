@@ -49,6 +49,35 @@
       var(--color-background);
   }
 
+  /* Hides the native scrollbar chrome on a scrollable element while keeping
+     it natively scrollable — used by the Favorites showcase, which is
+     navigated via its prev/next buttons instead of a visible scrollbar. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* A slim gray scrollbar thumb with no track background — used wherever a
+     visible scroll affordance is wanted without the browser's default
+     white/opaque track (e.g. search-result lists in modals). */
+  .thin-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-muted) transparent;
+  }
+  .thin-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-muted);
+    border-radius: 9999px;
+  }
+
   /* Subtle film-grain texture — layered over the auth card's translucent
      surface so it reads as frosted glass rather than a flat dark panel. */
   .bg-noise {

@@ -147,7 +147,7 @@ function SearchStep({
       />
 
       {results.length > 0 && (
-        <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
+        <ul className="thin-scrollbar flex max-h-64 flex-col gap-2 overflow-y-auto">
           {results.map((game) => (
             <li key={game.id}>
               <button
@@ -171,7 +171,7 @@ function SearchStep({
           {suggestions.length > 0 && (
             <>
               <p className="text-xs text-muted">Suggestions</p>
-              <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
+              <ul className="thin-scrollbar flex max-h-64 flex-col gap-2 overflow-y-auto">
                 {suggestions.map((suggestion, index) => (
                   <li key={index}>
                     <button
@@ -276,7 +276,7 @@ function ManualFormStep({ prefill, onCreated, onUseExisting, onCancel }: ManualF
         <button
           type="button"
           onClick={() => onUseExisting(duplicate)}
-          className="rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold text-accent-foreground"
+          className="rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold text-accent-foreground transition-transform hover:scale-105"
         >
           Use this one instead
         </button>
@@ -319,14 +319,14 @@ function ManualFormStep({ prefill, onCreated, onUseExisting, onCancel }: ManualF
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted"
+          className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted transition-colors hover:text-text"
         >
           Back
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex-1 rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold text-accent-foreground disabled:opacity-50"
+          className="flex-1 rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold text-accent-foreground transition-transform hover:scale-105 disabled:opacity-50"
         >
           Continue
         </button>
@@ -414,14 +414,14 @@ function DetailsStep({ game, onDone, onCancel }: DetailsStepProps) {
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted"
+          className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted transition-colors hover:text-text"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex-1 rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold text-accent-foreground disabled:opacity-50"
+          className="flex-1 rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold text-accent-foreground transition-transform hover:scale-105 disabled:opacity-50"
         >
           Add to library
         </button>

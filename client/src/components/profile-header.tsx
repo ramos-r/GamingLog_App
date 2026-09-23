@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { UserRound } from "lucide-react";
-import type { PublicUser } from "shared";
+import type { PublicUser, SocialLink } from "shared";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../hooks/use-auth";
-import { SocialPlatformIcon } from "./social-platform-icon";
 import { EditProfileModal } from "./edit-profile-modal";
+import { SortableSocialLinks } from "./sortable-social-links";
 
 const BIO_MAX_LENGTH = 280;
 
@@ -44,14 +44,10 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
           <BioEditor user={user} onUpdate={updateUser} />
 
           {user.socialLinks.length > 0 && (
-            <ul className="mt-3 flex flex-wrap gap-3">
-              {user.socialLinks.map((link) => (
-                <li key={link.id} className="flex items-center gap-1.5 text-xs text-muted">
-                  <SocialPlatformIcon platform={link.platform} className="h-4 w-4 shrink-0" />
-                  {link.handle}
-                </li>
-              ))}
-            </ul>
+            <SortableSocialLinks
+              links={user.socialLinks}
+              onReorder={(links: SocialLink[]) => updateUser({ ...user, socialLinks: links })}
+            />
           )}
         </div>
       </div>

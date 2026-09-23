@@ -38,7 +38,7 @@ export function StarRatingInput({ value, onChange, className }: StarRatingInputP
           tabIndex={-1}
           onClick={() => onChange(position)}
           aria-label={`${position} star${position > 1 ? "s" : ""}`}
-          className="p-0.5"
+          className="p-0.5 transition-transform hover:scale-125"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5">
             <path d={STAR_PATH} fill={position <= current ? "url(#star-filled)" : "url(#star-empty)"} />

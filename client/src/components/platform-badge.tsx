@@ -1,4 +1,5 @@
 import { Gamepad2 } from "lucide-react";
+import { siSteam } from "simple-icons";
 import { XboxIcon } from "./xbox-icon";
 
 interface PlatformBadgeProps {
@@ -8,7 +9,8 @@ interface PlatformBadgeProps {
 
 // Simple, original glyphs that evoke each platform without reproducing any
 // brand's actual logo artwork — CLAUDE.md calls for "a small bundled SVG
-// set", not a copy of trademarked marks.
+// set", not a copy of trademarked marks. Steam is the exception: it uses the
+// same simple-icons brand mark as the social-link picker, for consistency.
 function PcIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className="h-3 w-3">
@@ -22,10 +24,8 @@ function PcIcon() {
 
 function SteamIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-3 w-3">
-      <circle cx="9" cy="9" r="4" />
-      <circle cx="16" cy="16" r="3" />
-      <line x1="11.5" y1="11.5" x2="13.5" y2="13.5" />
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-3 w-3">
+      <path d={siSteam.path} />
     </svg>
   );
 }

@@ -50,7 +50,7 @@ function RemoveGameConfirm({ entry, onClose, onRemoved }: RemoveGameConfirmProps
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted"
+          className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted transition-colors hover:text-text"
         >
           Cancel
         </button>
@@ -58,7 +58,7 @@ function RemoveGameConfirm({ entry, onClose, onRemoved }: RemoveGameConfirmProps
           type="button"
           onClick={() => void handleRemove()}
           disabled={isRemoving}
-          className="flex-1 rounded-full bg-destructive py-2.5 font-baloo text-sm font-bold text-white disabled:opacity-50"
+          className="flex-1 rounded-full bg-destructive py-2.5 font-baloo text-sm font-bold text-white transition-transform hover:scale-105 disabled:opacity-50"
         >
           Yes, remove
         </button>

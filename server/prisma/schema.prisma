@@ -23,6 +23,7 @@ model SocialLink {
   id       String @id @default(cuid())
   platform String // "steam" | "xbox" | "playstation" | ...
   handle   String
+  order    Int    @default(0) // display order on the profile header, user-reorderable
   userId   String
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

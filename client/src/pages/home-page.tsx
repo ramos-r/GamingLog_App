@@ -14,7 +14,7 @@ import type { Category, LibraryEntry, LibraryResponse } from "shared";
 import { useAuth } from "../hooks/use-auth";
 import { apiFetch } from "../lib/api";
 import { ProfileHeader } from "../components/profile-header";
-import { FavoritesRow } from "../components/favorites-row";
+import { FavoritesRow, FAVORITES_DROP_ID } from "../components/favorites-row";
 import { CategorySection } from "../components/category-section";
 import { GameCard } from "../components/game-card";
 import { AddGameModal } from "../components/add-game-modal";
@@ -58,8 +58,36 @@ export function HomePage() {
     if (!over || !library) return;
 
     const entry = findEntry(active.id as string);
+    if (!entry) return;
+
+    if (over.id === FAVORITES_DROP_ID) {
+      if (entry.isFavorite) return;
+
+      const previousLibrary = library;
+      const updatedEntry: LibraryEntry = { ...entry, isFavorite: true };
+      const replaceEntry = (entries: LibraryEntry[]) => entries.map((e) => (e.id === entry.id ? updatedEntry : e));
+
+      setLibrary((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          playing: replaceEntry(prev.playing),
+          playedBefore: replaceEntry(prev.playedBefore),
+          wantToPlay: replaceEntry(prev.wantToPlay),
+          favorites: [...prev.favorites, updatedEntry],
+        };
+      });
+
+      try {
+        await apiFetch(`/library/${entry.id}`, { method: "PATCH", body: JSON.stringify({ isFavorite: true }) });
+      } catch {
+        setLibrary(previousLibrary);
+      }
+      return;
+    }
+
     const newCategory = over.id as Category;
-    if (!entry || entry.category === newCategory) return;
+    if (entry.category === newCategory) return;
 
     const previousLibrary = library;
     const updatedEntry: LibraryEntry = { ...entry, category: newCategory };
@@ -113,12 +141,16 @@ export function HomePage() {
 
         <ViewToggle value={viewMode} onChange={setViewMode} />
 
-        <FavoritesRow favorites={library.favorites} />
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <FavoritesRow
+            favorites={library.favorites}
+            onAddGame={() => setIsAddGameOpen(true)}
+            onChanged={() => void refreshLibrary()}
+          />
 
-        {viewMode === "all" ? (
-          <AllGamesGrid library={library} onChanged={() => void refreshLibrary()} />
-        ) : (
-          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          {viewMode === "all" ? (
+            <AllGamesGrid library={library} onChanged={() => void refreshLibrary()} />
+          ) : (
             <div className="flex flex-col gap-8">
               <CategorySection
                 category="PLAYING"
@@ -145,10 +177,10 @@ export function HomePage() {
                 onChanged={() => void refreshLibrary()}
               />
             </div>
+          )}
 
-            <DragOverlay>{activeEntry && <GameCard entry={activeEntry} onChanged={() => {}} />}</DragOverlay>
-          </DndContext>
-        )}
+          <DragOverlay>{activeEntry && <GameCard entry={activeEntry} onChanged={() => {}} />}</DragOverlay>
+        </DndContext>
       </div>
 
       <AddGameModal open={isAddGameOpen} onClose={() => setIsAddGameOpen(false)} onAdded={() => void refreshLibrary()} />

@@ -7,6 +7,7 @@ export interface SocialLink {
   id: string;
   platform: string;
   handle: string;
+  order: number;
 }
 
 export interface PublicUser {

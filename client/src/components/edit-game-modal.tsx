@@ -120,14 +120,14 @@ function EditGameForm({ entry, onChanged, onClose }: EditGameFormProps) {
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted"
+          className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted transition-colors hover:text-text"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex-1 rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold text-accent-foreground disabled:opacity-50"
+          className="flex-1 rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold text-accent-foreground transition-transform hover:scale-105 disabled:opacity-50"
         >
           Save changes
         </button>
@@ -142,7 +142,7 @@ function EditGameForm({ entry, onChanged, onClose }: EditGameFormProps) {
             <button
               type="button"
               onClick={() => setIsConfirmingRemove(false)}
-              className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted"
+              className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted transition-colors hover:text-text"
             >
               Cancel
             </button>
@@ -150,7 +150,7 @@ function EditGameForm({ entry, onChanged, onClose }: EditGameFormProps) {
               type="button"
               onClick={() => void handleRemove()}
               disabled={isRemoving}
-              className="flex-1 rounded-full bg-destructive py-2.5 font-baloo text-sm font-bold text-white disabled:opacity-50"
+              className="flex-1 rounded-full bg-destructive py-2.5 font-baloo text-sm font-bold text-white transition-transform hover:scale-105 disabled:opacity-50"
             >
               Yes, remove
             </button>
@@ -160,7 +160,7 @@ function EditGameForm({ entry, onChanged, onClose }: EditGameFormProps) {
         <button
           type="button"
           onClick={() => setIsConfirmingRemove(true)}
-          className="self-start text-sm font-medium text-destructive"
+          className="self-start text-sm font-medium text-destructive transition-opacity hover:opacity-80"
         >
           Remove from my library
         </button>

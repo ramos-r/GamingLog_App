@@ -84,7 +84,7 @@ export function AuthCard({ mode }: AuthCardProps) {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="mt-2 rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold tracking-wide text-accent-foreground transition-colors disabled:opacity-50"
+          className="mt-2 rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold tracking-wide text-accent-foreground transition-transform hover:scale-105 disabled:opacity-50"
         >
           {mode === "login" ? "LOG IN" : "CREATE ACCOUNT"}
         </button>

@@ -47,7 +47,10 @@ authRouter.post("/login", async (req, res) => {
   }
   const { username, password } = parsed.data;
 
-  const user = await prisma.user.findUnique({ where: { username }, include: { socialLinks: true } });
+  const user = await prisma.user.findUnique({
+    where: { username },
+    include: { socialLinks: { orderBy: { order: "asc" } } },
+  });
   const validPassword = user ? await verifyPassword(password, user.passwordHash) : false;
 
   if (!user || !validPassword) {
@@ -66,7 +69,10 @@ authRouter.post("/logout", (_req, res) => {
 });
 
 authRouter.get("/me", requireAuth, async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { id: req.userId }, include: { socialLinks: true } });
+  const user = await prisma.user.findUnique({
+    where: { id: req.userId },
+    include: { socialLinks: { orderBy: { order: "asc" } } },
+  });
   if (!user) {
     res.status(401).json({ error: "Not authenticated" });
     return;
