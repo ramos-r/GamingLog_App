@@ -2,7 +2,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "client/dist",
   "functions": {
-    "server/api/index.ts": {}
+    "server/api/index.ts": {
+      "maxDuration": 30
+    }
   },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/server/api/index" }
