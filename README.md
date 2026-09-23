@@ -7,8 +7,10 @@ and phased build plan.
 ## Structure
 
 - `client/` — React + TypeScript SPA (Vite), deployed as the static site.
-- `server/` — Express + TypeScript API, deployed as Vercel serverless
-  functions under `/api` (entry point: `server/api/index.ts`).
+- `server/` — Express + TypeScript API. `api/index.ts` at the repo root
+  re-exports its Express app as the single Vercel serverless function
+  handling every `/api/*` request (Vercel's zero-config function detection
+  only looks in a root-level `api/` directory, not a nested one).
 - `shared/` — Types shared between `client/` and `server/` (API DTOs,
   derived from Prisma model types) so neither side hand-duplicates them.
 
@@ -53,5 +55,5 @@ direct URL there.
 ## Deploy
 
 Push to `main` — once the repo is linked on Vercel, it builds and deploys
-automatically per `vercel.json` (static `client/` build + `server/api`
-serverless function, with `/api/*` rewritten to it).
+automatically per `vercel.json` (static `client/` build + the root
+`api/index.ts` serverless function, with `/api/*` rewritten to it).
