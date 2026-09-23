@@ -3,8 +3,9 @@ import { UserRound, X } from "lucide-react";
 import type { PublicUser, SocialLink } from "shared";
 import { apiFetch, ApiError } from "../lib/api";
 import { uploadFile } from "../lib/upload";
-import { PLATFORM_OPTIONS } from "../lib/platforms";
+import { SOCIAL_PLATFORM_OPTIONS } from "../lib/social-platforms";
 import { Modal } from "./modal";
+import { SocialPlatformSelect } from "./social-platform-select";
 
 interface EditProfileModalProps {
   open: boolean;
@@ -77,7 +78,7 @@ function EditProfileForm({ user, onUpdated, onClose }: EditProfileFormProps) {
   }
 
   function addLink() {
-    setLinks((prev) => [...prev, { id: crypto.randomUUID(), platform: PLATFORM_OPTIONS[0], handle: "", isNew: true }]);
+    setLinks((prev) => [...prev, { id: crypto.randomUUID(), platform: SOCIAL_PLATFORM_OPTIONS[0], handle: "", isNew: true }]);
   }
 
   function updateLink(id: string, patch: Partial<Pick<LinkRow, "platform" | "handle">>) {
@@ -191,17 +192,9 @@ function EditProfileForm({ user, onUpdated, onClose }: EditProfileFormProps) {
         <p className="text-xs text-muted">Social links</p>
         {links.map((link) => (
           <div key={link.id} className="flex gap-2">
-            <select
-              className="input-surface rounded-lg px-2 py-2 text-sm text-text"
-              value={link.platform}
-              onChange={(e) => updateLink(link.id, { platform: e.target.value })}
-            >
-              {PLATFORM_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+            <div className="w-36 shrink-0">
+              <SocialPlatformSelect value={link.platform} onChange={(platform) => updateLink(link.id, { platform })} />
+            </div>
             <input
               className="input-surface flex-1 rounded-lg px-3 py-2 text-sm text-text placeholder:text-placeholder"
               placeholder="Handle"

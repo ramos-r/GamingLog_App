@@ -1,4 +1,5 @@
 import { Gamepad2 } from "lucide-react";
+import { XboxIcon } from "./xbox-icon";
 
 interface PlatformBadgeProps {
   platform: string | null;
@@ -25,15 +26,6 @@ function SteamIcon() {
       <circle cx="9" cy="9" r="4" />
       <circle cx="16" cy="16" r="3" />
       <line x1="11.5" y1="11.5" x2="13.5" y2="13.5" />
-    </svg>
-  );
-}
-
-function XboxIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="h-3 w-3">
-      <path d="M5 5 L19 19" />
-      <path d="M19 5 L5 19" />
     </svg>
   );
 }

@@ -1,4 +1,5 @@
-import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { ModalPortalContext } from "../lib/modal-portal";
 
 interface ModalProps {
   open: boolean;
@@ -10,6 +11,7 @@ interface ModalProps {
 // for free — no need to hand-roll either.
 export function Modal({ open, onClose, children }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const [dialogNode, setDialogNode] = useState<HTMLDialogElement | null>(null);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -29,13 +31,16 @@ export function Modal({ open, onClose, children }: ModalProps) {
 
   return (
     <dialog
-      ref={ref}
+      ref={(node) => {
+        ref.current = node;
+        setDialogNode(node);
+      }}
       onClose={onClose}
       onCancel={onClose}
       onClick={handleBackdropClick}
       className="fixed inset-0 m-auto max-h-[85vh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl border border-subtle bg-surface p-6 text-text backdrop:bg-black/60"
     >
-      {children}
+      <ModalPortalContext.Provider value={dialogNode}>{children}</ModalPortalContext.Provider>
     </dialog>
   );
 }

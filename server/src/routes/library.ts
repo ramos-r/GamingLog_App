@@ -29,7 +29,7 @@ libraryRouter.get("/", async (req, res) => {
   const entries = await prisma.userGame.findMany({
     where: { userId: req.userId },
     include: { game: true },
-    orderBy: { addedAt: "asc" },
+    orderBy: { addedAt: "desc" },
   });
 
   res.json({

@@ -6,12 +6,8 @@ import { PLATFORM_OPTIONS } from "../lib/platforms";
 import { Modal } from "./modal";
 import { GameCover } from "./game-cover";
 import { StarRatingInput } from "./star-rating-input";
-
-const CATEGORY_OPTIONS: { value: Category; label: string }[] = [
-  { value: "PLAYING", label: "Playing" },
-  { value: "PLAYED_BEFORE", label: "Played Before" },
-  { value: "WANT_TO_PLAY", label: "Want to Play" },
-];
+import { PlatformSelect } from "./platform-select";
+import { CategorySelect } from "./category-select";
 
 type Step =
   | { kind: "search" }
@@ -386,32 +382,12 @@ function DetailsStep({ game, onDone, onCancel }: DetailsStepProps) {
 
       <label className="flex flex-col gap-1 text-sm">
         Category
-        <select
-          className="input-surface rounded-lg px-3 py-2.5 text-sm text-text"
-          value={category}
-          onChange={(e) => setCategory(e.target.value as Category)}
-        >
-          {CATEGORY_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <CategorySelect value={category} onChange={setCategory} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
         Platform (optional)
-        <select
-          className="input-surface rounded-lg px-3 py-2.5 text-sm text-text"
-          value={platform}
-          onChange={(e) => setPlatform(e.target.value)}
-        >
-          {PLATFORM_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <PlatformSelect value={platform} onChange={setPlatform} />
       </label>
       {platform === "Other" && (
         <input

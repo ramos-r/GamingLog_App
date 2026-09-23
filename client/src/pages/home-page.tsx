@@ -1,17 +1,39 @@
 import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
-import type { LibraryResponse } from "shared";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import type { Category, LibraryEntry, LibraryResponse } from "shared";
 import { useAuth } from "../hooks/use-auth";
 import { apiFetch } from "../lib/api";
 import { ProfileHeader } from "../components/profile-header";
 import { FavoritesRow } from "../components/favorites-row";
 import { CategorySection } from "../components/category-section";
+import { GameCard } from "../components/game-card";
 import { AddGameModal } from "../components/add-game-modal";
+import { ViewToggle } from "../components/view-toggle";
+import { AllGamesGrid } from "../components/all-games-grid";
+
+type ViewMode = "category" | "all";
 
 export function HomePage() {
   const { user, logout } = useAuth();
   const [library, setLibrary] = useState<LibraryResponse | null>(null);
   const [isAddGameOpen, setIsAddGameOpen] = useState(false);
+  const [activeEntry, setActiveEntry] = useState<LibraryEntry | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("category");
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
 
   function refreshLibrary() {
     return apiFetch<LibraryResponse>("/library").then(setLibrary);
@@ -21,12 +43,54 @@ export function HomePage() {
     void refreshLibrary();
   }, []);
 
+  function findEntry(entryId: string): LibraryEntry | undefined {
+    if (!library) return undefined;
+    return [...library.playing, ...library.playedBefore, ...library.wantToPlay].find((e) => e.id === entryId);
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveEntry(findEntry(event.active.id as string) ?? null);
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    setActiveEntry(null);
+    const { active, over } = event;
+    if (!over || !library) return;
+
+    const entry = findEntry(active.id as string);
+    const newCategory = over.id as Category;
+    if (!entry || entry.category === newCategory) return;
+
+    const previousLibrary = library;
+    const updatedEntry: LibraryEntry = { ...entry, category: newCategory };
+    const withoutEntry = (entries: LibraryEntry[]) => entries.filter((e) => e.id !== entry.id);
+
+    setLibrary((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        playing: newCategory === "PLAYING" ? [...withoutEntry(prev.playing), updatedEntry] : withoutEntry(prev.playing),
+        playedBefore:
+          newCategory === "PLAYED_BEFORE" ? [...withoutEntry(prev.playedBefore), updatedEntry] : withoutEntry(prev.playedBefore),
+        wantToPlay:
+          newCategory === "WANT_TO_PLAY" ? [...withoutEntry(prev.wantToPlay), updatedEntry] : withoutEntry(prev.wantToPlay),
+        favorites: prev.favorites.map((e) => (e.id === entry.id ? updatedEntry : e)),
+      };
+    });
+
+    try {
+      await apiFetch(`/library/${entry.id}`, { method: "PATCH", body: JSON.stringify({ category: newCategory }) });
+    } catch {
+      setLibrary(previousLibrary);
+    }
+  }
+
   if (!user || !library) {
     return null;
   }
 
   return (
-    <main className="min-h-screen bg-background pb-24 text-text">
+    <main className="min-h-screen bg-background pb-16 text-text">
       <div className="flex justify-end px-4 pt-3 sm:px-8">
         <button type="button" onClick={() => void logout()} className="text-xs text-muted transition-colors hover:text-text">
           Log out
@@ -35,36 +99,57 @@ export function HomePage() {
 
       <ProfileHeader user={user} />
 
-      <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8 sm:px-8">
-        <FavoritesRow favorites={library.favorites} />
-        <CategorySection
-          title="Playing"
-          entries={library.playing}
-          emptyMessage="Nothing here yet — add a game to get started."
-          onAddGame={() => setIsAddGameOpen(true)}
-        />
-        <CategorySection
-          title="Played Before"
-          entries={library.playedBefore}
-          emptyMessage="Nothing here yet — add a game to get started."
-          onAddGame={() => setIsAddGameOpen(true)}
-        />
-        <CategorySection
-          title="Want to Play"
-          entries={library.wantToPlay}
-          emptyMessage="Nothing here yet — add a game to get started."
-          onAddGame={() => setIsAddGameOpen(true)}
-        />
-      </div>
+      <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-8">
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setIsAddGameOpen(true)}
+            className="flex items-center gap-1.5 rounded-full bg-accent-gradient px-4 py-2 font-baloo text-sm font-bold text-accent-foreground transition-transform hover:scale-105"
+          >
+            <Plus className="h-4 w-4" />
+            Add game
+          </button>
+        </div>
 
-      <button
-        type="button"
-        aria-label="Add game"
-        onClick={() => setIsAddGameOpen(true)}
-        className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-accent-gradient text-accent-foreground shadow-2xl transition-transform hover:scale-105"
-      >
-        <Plus className="h-6 w-6" />
-      </button>
+        <ViewToggle value={viewMode} onChange={setViewMode} />
+
+        <FavoritesRow favorites={library.favorites} />
+
+        {viewMode === "all" ? (
+          <AllGamesGrid library={library} onChanged={() => void refreshLibrary()} />
+        ) : (
+          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <div className="flex flex-col gap-8">
+              <CategorySection
+                category="PLAYING"
+                title="Playing"
+                entries={library.playing}
+                emptyMessage="Nothing here yet — add a game to get started."
+                onAddGame={() => setIsAddGameOpen(true)}
+                onChanged={() => void refreshLibrary()}
+              />
+              <CategorySection
+                category="PLAYED_BEFORE"
+                title="Played Before"
+                entries={library.playedBefore}
+                emptyMessage="Nothing here yet — add a game to get started."
+                onAddGame={() => setIsAddGameOpen(true)}
+                onChanged={() => void refreshLibrary()}
+              />
+              <CategorySection
+                category="WANT_TO_PLAY"
+                title="Want to Play"
+                entries={library.wantToPlay}
+                emptyMessage="Nothing here yet — add a game to get started."
+                onAddGame={() => setIsAddGameOpen(true)}
+                onChanged={() => void refreshLibrary()}
+              />
+            </div>
+
+            <DragOverlay>{activeEntry && <GameCard entry={activeEntry} onChanged={() => {}} />}</DragOverlay>
+          </DndContext>
+        )}
+      </div>
 
       <AddGameModal open={isAddGameOpen} onClose={() => setIsAddGameOpen(false)} onAdded={() => void refreshLibrary()} />
     </main>

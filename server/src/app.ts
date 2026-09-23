@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type ErrorRequestHandler } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { authRouter } from "./routes/auth.js";
@@ -24,3 +24,17 @@ app.use("/api/catalog", catalogRouter);
 app.use("/api/library", libraryRouter);
 app.use("/api/uploads", uploadsRouter);
 app.use("/api/users", usersRouter);
+
+// Catches body-parser failures (e.g. a request over the JSON size limit)
+// so they come back as a JSON error instead of Express's default HTML page —
+// the client's error handling only ever expects JSON.
+const jsonErrorHandler: ErrorRequestHandler = (err, _req, res, next) => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+  const status = err && typeof err === "object" && "status" in err ? Number(err.status) || 500 : 500;
+  const message = status === 413 ? "File is too large" : "Invalid request";
+  res.status(status).json({ error: message });
+};
+app.use(jsonErrorHandler);

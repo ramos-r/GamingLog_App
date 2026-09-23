@@ -3,7 +3,7 @@ import { UserRound } from "lucide-react";
 import type { PublicUser } from "shared";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../hooks/use-auth";
-import { PlatformBadge } from "./platform-badge";
+import { SocialPlatformIcon } from "./social-platform-icon";
 import { EditProfileModal } from "./edit-profile-modal";
 
 const BIO_MAX_LENGTH = 280;
@@ -47,7 +47,7 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
             <ul className="mt-3 flex flex-wrap gap-3">
               {user.socialLinks.map((link) => (
                 <li key={link.id} className="flex items-center gap-1.5 text-xs text-muted">
-                  <PlatformBadge platform={link.platform} />
+                  <SocialPlatformIcon platform={link.platform} className="h-4 w-4 shrink-0" />
                   {link.handle}
                 </li>
               ))}
@@ -88,7 +88,7 @@ function BioEditor({ user, onUpdate }: BioEditorProps) {
           setValue(user.bio ?? "");
           setIsEditing(true);
         }}
-        className="mt-2 block max-w-prose text-left text-sm text-muted transition-colors hover:text-text"
+        className="mt-2 block w-full max-w-prose whitespace-normal break-words text-left text-sm text-muted transition-colors hover:text-text"
       >
         {user.bio ?? "No bio yet — click to add one."}
       </button>
@@ -104,7 +104,7 @@ function BioEditor({ user, onUpdate }: BioEditorProps) {
         maxLength={BIO_MAX_LENGTH}
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => void handleBlur()}
-        className="input-surface rounded-lg px-3 py-2 text-sm text-text"
+        className="input-surface w-full break-words rounded-lg px-3 py-2 text-sm text-text"
       />
       <span className="text-xs text-muted">{BIO_MAX_LENGTH - value.length} characters remaining</span>
     </div>
