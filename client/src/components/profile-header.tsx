@@ -29,7 +29,7 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
           )}
         </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="w-full min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h1 className="font-baloo text-xl font-bold">{user.username}</h1>
             <button
