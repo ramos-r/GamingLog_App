@@ -33,6 +33,7 @@ const jsonErrorHandler: ErrorRequestHandler = (err, _req, res, next) => {
     next(err);
     return;
   }
+  console.error(err);
   const status = err && typeof err === "object" && "status" in err ? Number(err.status) || 500 : 500;
   const message = status === 413 ? "File is too large" : "Invalid request";
   res.status(status).json({ error: message });
