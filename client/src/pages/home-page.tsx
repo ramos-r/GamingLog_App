@@ -128,7 +128,8 @@ export function HomePage() {
       <ProfileHeader user={user} />
 
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-8">
-        <div className="flex flex-wrap items-center justify-end gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <ViewToggle value={viewMode} onChange={setViewMode} />
           <button
             type="button"
             onClick={() => setIsAddGameOpen(true)}
@@ -138,8 +139,6 @@ export function HomePage() {
             Add game
           </button>
         </div>
-
-        <ViewToggle value={viewMode} onChange={setViewMode} />
 
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <FavoritesRow
