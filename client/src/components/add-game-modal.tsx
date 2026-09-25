@@ -8,10 +8,7 @@ import { StarRatingInput } from "./star-rating-input";
 import { PlatformSelect } from "./platform-select";
 import { CategorySelect } from "./category-select";
 
-type Step =
-  | { kind: "search" }
-  | { kind: "manual"; prefill?: { title: string; genre: string; coverUrl: string } }
-  | { kind: "details"; game: CatalogGame };
+type Step = { kind: "search" } | { kind: "details"; game: CatalogGame };
 
 interface AddGameModalProps {
   open: boolean;
@@ -40,6 +37,8 @@ function AddGameFlow({ onClose, onAdded }: AddGameFlowProps) {
   const [catalogResults, setCatalogResults] = useState<CatalogGame[]>([]);
   const [igdbSuggestions, setIgdbSuggestions] = useState<IgdbSuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (step.kind !== "search") return;
@@ -62,6 +61,42 @@ function AddGameFlow({ onClose, onAdded }: AddGameFlowProps) {
     return () => clearTimeout(timeout);
   }, [query, step.kind]);
 
+  // A suggestion's title/genre/cover come straight from IGDB and are never
+  // user-editable — this creates the catalog entry as-is and moves straight
+  // to the library-details step, with no manual review/edit step in between.
+  async function handleSelectSuggestion(suggestion: IgdbSuggestion) {
+    setCreateError(null);
+    setIsCreating(true);
+    try {
+      const game = await apiFetch<CatalogGame>("/catalog", {
+        method: "POST",
+        body: JSON.stringify({
+          title: suggestion.title,
+          genre: suggestion.genre || undefined,
+          coverUrl: suggestion.coverUrl || undefined,
+        }),
+      });
+      setStep({ kind: "details", game });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        // The server includes the existing match on a 409 — apiFetch only
+        // surfaces the message, so re-fetch the raw body for the game itself.
+        const res = await fetch(`/api/catalog?search=${encodeURIComponent(suggestion.title)}`, { credentials: "include" });
+        const matches = (await res.json()) as CatalogGame[];
+        const existing = matches.find((g) => g.title.toLowerCase() === suggestion.title.toLowerCase());
+        if (existing) {
+          setStep({ kind: "details", game: existing });
+        } else {
+          setCreateError(err.message);
+        }
+      } else {
+        setCreateError(err instanceof ApiError ? err.message : "Something went wrong");
+      }
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
   return (
     <>
       {step.kind === "search" && (
@@ -71,23 +106,10 @@ function AddGameFlow({ onClose, onAdded }: AddGameFlowProps) {
           results={catalogResults}
           suggestions={igdbSuggestions}
           isSearching={isSearching}
+          isCreating={isCreating}
+          error={createError}
           onSelectGame={(game) => setStep({ kind: "details", game })}
-          onSelectSuggestion={(suggestion) =>
-            setStep({
-              kind: "manual",
-              prefill: { title: suggestion.title, genre: suggestion.genre ?? "", coverUrl: suggestion.coverUrl ?? "" },
-            })
-          }
-          onAddManually={() => setStep({ kind: "manual" })}
-        />
-      )}
-
-      {step.kind === "manual" && (
-        <ManualFormStep
-          prefill={step.prefill}
-          onCreated={(game) => setStep({ kind: "details", game })}
-          onUseExisting={(game) => setStep({ kind: "details", game })}
-          onCancel={() => setStep({ kind: "search" })}
+          onSelectSuggestion={(suggestion) => void handleSelectSuggestion(suggestion)}
         />
       )}
 
@@ -111,9 +133,10 @@ interface SearchStepProps {
   results: CatalogGame[];
   suggestions: IgdbSuggestion[];
   isSearching: boolean;
+  isCreating: boolean;
+  error: string | null;
   onSelectGame: (game: CatalogGame) => void;
   onSelectSuggestion: (suggestion: IgdbSuggestion) => void;
-  onAddManually: () => void;
 }
 
 function SearchStep({
@@ -122,9 +145,10 @@ function SearchStep({
   results,
   suggestions,
   isSearching,
+  isCreating,
+  error,
   onSelectGame,
   onSelectSuggestion,
-  onAddManually,
 }: SearchStepProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -165,9 +189,12 @@ function SearchStep({
         </ul>
       )}
 
+      {isCreating && <p className="text-sm text-muted">Adding…</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
       {showIgdbFallback && (
         <div className="flex flex-col gap-2">
-          {suggestions.length > 0 && (
+          {suggestions.length > 0 ? (
             <>
               <p className="text-xs text-muted">Suggestions</p>
               <ul className="thin-scrollbar flex max-h-64 flex-col gap-2 overflow-y-auto">
@@ -175,8 +202,9 @@ function SearchStep({
                   <li key={index}>
                     <button
                       type="button"
+                      disabled={isCreating}
                       onClick={() => onSelectSuggestion(suggestion)}
-                      className="flex w-full items-center gap-3 rounded-lg bg-surface-raised p-2 text-left transition-colors hover:bg-subtle"
+                      className="flex w-full items-center gap-3 rounded-lg bg-surface-raised p-2 text-left transition-colors hover:bg-subtle disabled:opacity-50"
                     >
                       <GameCover coverUrl={suggestion.coverUrl} title={suggestion.title} className="w-10 shrink-0" />
                       <span className="min-w-0 flex-1">
@@ -191,122 +219,12 @@ function SearchStep({
               </ul>
               <p className="text-xs text-muted">Game data &amp; covers via IGDB.com</p>
             </>
+          ) : (
+            <p className="text-sm text-muted">No games found.</p>
           )}
-          <button
-            type="button"
-            onClick={onAddManually}
-            className="rounded-full border border-subtle py-2 font-baloo text-sm font-bold text-muted transition-colors hover:text-text"
-          >
-            Can&apos;t find it? Add it manually
-          </button>
         </div>
       )}
     </div>
-  );
-}
-
-interface ManualFormStepProps {
-  prefill?: { title: string; genre: string; coverUrl: string };
-  onCreated: (game: CatalogGame) => void;
-  onUseExisting: (game: CatalogGame) => void;
-  onCancel: () => void;
-}
-
-function ManualFormStep({ prefill, onCreated, onUseExisting, onCancel }: ManualFormStepProps) {
-  const [title, setTitle] = useState(prefill?.title ?? "");
-  const [genre, setGenre] = useState(prefill?.genre ?? "");
-  // Not user-editable — carried through silently from an IGDB suggestion's
-  // prefill (if any) so picking a suggestion still keeps its real cover.
-  // Users can no longer set or override a game's cover from this form.
-  const coverUrl = prefill?.coverUrl ?? "";
-  const [error, setError] = useState<string | null>(null);
-  const [duplicate, setDuplicate] = useState<CatalogGame | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    setError(null);
-    setDuplicate(null);
-    setIsSubmitting(true);
-    try {
-      const game = await apiFetch<CatalogGame>("/catalog", {
-        method: "POST",
-        body: JSON.stringify({ title, genre: genre || undefined, coverUrl: coverUrl || undefined }),
-      });
-      onCreated(game);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        // The server includes the existing match on a 409 — apiFetch only
-        // surfaces the message, so re-fetch the raw body for the game itself.
-        const res = await fetch(`/api/catalog?search=${encodeURIComponent(title)}`, { credentials: "include" });
-        const matches = (await res.json()) as CatalogGame[];
-        const existing = matches.find((g) => g.title.toLowerCase() === title.toLowerCase());
-        if (existing) {
-          setDuplicate(existing);
-        } else {
-          setError(err.message);
-        }
-      } else {
-        setError(err instanceof ApiError ? err.message : "Something went wrong");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  if (duplicate) {
-    return (
-      <div className="flex flex-col gap-4">
-        <h2 className="font-baloo text-lg font-bold">Already in the catalog</h2>
-        <p className="text-sm text-muted">A game called &quot;{duplicate.title}&quot; already exists.</p>
-        <button
-          type="button"
-          onClick={() => onUseExisting(duplicate)}
-          className="rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold text-accent-foreground transition-transform hover:scale-105"
-        >
-          Use this one instead
-        </button>
-        <button type="button" onClick={() => setDuplicate(null)} className="text-xs text-muted hover:text-text">
-          Back
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <h2 className="font-baloo text-lg font-bold">Add a new game</h2>
-      <input
-        className="input-surface rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-placeholder"
-        placeholder="Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        required
-      />
-      <input
-        className="input-surface rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-placeholder"
-        placeholder="Genre (optional)"
-        value={genre}
-        onChange={(e) => setGenre(e.target.value)}
-      />
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      <div className="mt-2 flex gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex-1 rounded-full border border-subtle py-2.5 font-baloo text-sm font-bold text-muted transition-colors hover:text-text"
-        >
-          Back
-        </button>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="flex-1 rounded-full bg-accent-gradient py-2.5 font-baloo text-sm font-bold text-accent-foreground transition-transform hover:scale-105 disabled:opacity-50"
-        >
-          Continue
-        </button>
-      </div>
-    </form>
   );
 }
 
