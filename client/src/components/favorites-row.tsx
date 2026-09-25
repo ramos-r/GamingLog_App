@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, MoreHorizontal, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, Plus, Star } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import type { LibraryEntry } from "shared";
+import { apiFetch } from "../lib/api";
 import { GameCover } from "./game-cover";
 import { ManageFavoritesModal } from "./manage-favorites-modal";
 
@@ -54,6 +55,11 @@ export function FavoritesRow({ favorites, onAddGame, onChanged }: FavoritesRowPr
     scrollToIndex(atStart ? itemCount - 1 : currentIndex(el) - 1);
   }
 
+  async function handleUnfavorite(entryId: string) {
+    await apiFetch(`/library/${entryId}`, { method: "PATCH", body: JSON.stringify({ isFavorite: false }) });
+    onChanged();
+  }
+
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
@@ -77,8 +83,17 @@ export function FavoritesRow({ favorites, onAddGame, onChanged }: FavoritesRowPr
               ref={(el) => {
                 itemRefs.current[index] = el;
               }}
+              className="group relative shrink-0"
             >
-              <GameCover coverUrl={entry.game.coverUrl} title={entry.game.title} className="w-24 shrink-0 sm:w-28" />
+              <GameCover coverUrl={entry.game.coverUrl} title={entry.game.title} className="w-24 sm:w-28" />
+              <button
+                type="button"
+                onClick={() => void handleUnfavorite(entry.id)}
+                aria-label={`Remove ${entry.game.title} from favorites`}
+                className="absolute right-1 top-1 rounded-full bg-background/60 p-1 text-accent-light opacity-0 transition group-hover:opacity-100 hover:scale-110 hover:text-muted"
+              >
+                <Star className="h-4 w-4 fill-current hover:fill-none" />
+              </button>
             </div>
           ))}
           <button
