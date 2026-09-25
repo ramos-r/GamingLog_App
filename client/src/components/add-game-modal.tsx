@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { CatalogGame, Category, IgdbSuggestion } from "shared";
 import { apiFetch, ApiError } from "../lib/api";
-import { uploadFile } from "../lib/upload";
 import { PLATFORM_OPTIONS } from "../lib/platforms";
 import { Modal } from "./modal";
 import { GameCover } from "./game-cover";
@@ -216,26 +215,13 @@ interface ManualFormStepProps {
 function ManualFormStep({ prefill, onCreated, onUseExisting, onCancel }: ManualFormStepProps) {
   const [title, setTitle] = useState(prefill?.title ?? "");
   const [genre, setGenre] = useState(prefill?.genre ?? "");
-  const [coverUrl, setCoverUrl] = useState(prefill?.coverUrl ?? "");
+  // Not user-editable — carried through silently from an IGDB suggestion's
+  // prefill (if any) so picking a suggestion still keeps its real cover.
+  // Users can no longer set or override a game's cover from this form.
+  const coverUrl = prefill?.coverUrl ?? "";
   const [error, setError] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState<CatalogGame | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-
-  async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setIsUploading(true);
-    setError(null);
-    try {
-      const url = await uploadFile(file);
-      setCoverUrl(url);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Upload failed");
-    } finally {
-      setIsUploading(false);
-    }
-  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -303,17 +289,6 @@ function ManualFormStep({ prefill, onCreated, onUseExisting, onCancel }: ManualF
         value={genre}
         onChange={(e) => setGenre(e.target.value)}
       />
-      <input
-        className="input-surface rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-placeholder"
-        placeholder="Cover URL (optional)"
-        value={coverUrl}
-        onChange={(e) => setCoverUrl(e.target.value)}
-      />
-      <label className="text-xs text-muted">
-        Or upload a cover
-        <input type="file" accept="image/*" onChange={(e) => void handleUpload(e)} className="mt-1 block text-xs" />
-      </label>
-      {isUploading && <p className="text-xs text-muted">Uploading…</p>}
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="mt-2 flex gap-2">
         <button
