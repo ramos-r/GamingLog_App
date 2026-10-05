@@ -9,11 +9,13 @@ import { GameCardMenu } from "./game-card-menu";
 
 interface GameCardProps {
   entry: LibraryEntry;
-  onChanged: () => void;
+  onChanged?: () => void;
   categoryLabel?: string;
+  // Someone else's profile: no menu, no edit/remove modals.
+  readOnly?: boolean;
 }
 
-export function GameCard({ entry, onChanged, categoryLabel }: GameCardProps) {
+export function GameCard({ entry, onChanged = () => {}, categoryLabel, readOnly = false }: GameCardProps) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isRemoveOpen, setIsRemoveOpen] = useState(false);
 
@@ -22,7 +24,7 @@ export function GameCard({ entry, onChanged, categoryLabel }: GameCardProps) {
       <GameCover coverUrl={entry.game.coverUrl} title={entry.game.title} className="w-16 shrink-0" />
       <div className="flex min-w-0 flex-1 flex-col justify-between">
         <div>
-          <p className="break-words pr-6 font-baloo text-sm font-medium">{entry.game.title}</p>
+          <p className={`break-words font-baloo text-sm font-medium ${readOnly ? "" : "pr-6"}`}>{entry.game.title}</p>
           {categoryLabel && <p className="mt-0.5 text-xs text-muted">{categoryLabel}</p>}
         </div>
         <div className="flex items-center gap-2">
@@ -31,14 +33,18 @@ export function GameCard({ entry, onChanged, categoryLabel }: GameCardProps) {
         </div>
       </div>
 
-      <GameCardMenu
-        title={entry.game.title}
-        onEdit={() => setIsEditOpen(true)}
-        onRemove={() => setIsRemoveOpen(true)}
-      />
+      {!readOnly && (
+        <>
+          <GameCardMenu
+            title={entry.game.title}
+            onEdit={() => setIsEditOpen(true)}
+            onRemove={() => setIsRemoveOpen(true)}
+          />
 
-      <EditGameModal open={isEditOpen} onClose={() => setIsEditOpen(false)} entry={entry} onChanged={onChanged} />
-      <RemoveGameModal open={isRemoveOpen} onClose={() => setIsRemoveOpen(false)} entry={entry} onRemoved={onChanged} />
+          <EditGameModal open={isEditOpen} onClose={() => setIsEditOpen(false)} entry={entry} onChanged={onChanged} />
+          <RemoveGameModal open={isRemoveOpen} onClose={() => setIsRemoveOpen(false)} entry={entry} onRemoved={onChanged} />
+        </>
+      )}
     </div>
   );
 }

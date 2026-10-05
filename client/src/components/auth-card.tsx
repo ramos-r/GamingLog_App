@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../hooks/use-auth";
 import { ApiError } from "../lib/api";
+import { loginUrlFor, safeRedirect } from "../lib/safe-redirect";
 
 interface AuthCardProps {
   mode: "login" | "register";
@@ -10,6 +11,9 @@ interface AuthCardProps {
 export function AuthCard({ mode }: AuthCardProps) {
   const { login, register } = useAuth();
   const navigate = useNavigate();
+  // Where to go after logging in (set when a logged-out visitor hit a page
+  // that needed it); validated so it can't be used as an open redirect.
+  const redirectTo = safeRedirect(useSearchParams()[0].get("redirect"));
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -32,7 +36,7 @@ export function AuthCard({ mode }: AuthCardProps) {
       } else {
         await register({ username, password });
       }
-      navigate("/");
+      navigate(redirectTo);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong");
     } finally {
@@ -93,14 +97,14 @@ export function AuthCard({ mode }: AuthCardProps) {
 
         {mode === "login" ? (
           <Link
-            to="/register"
+            to={loginUrlFor(redirectTo, "register")}
             className="rounded-full border border-subtle py-2.5 text-center font-baloo text-sm font-bold tracking-wide text-muted transition-colors hover:text-text"
           >
             CREATE ACCOUNT
           </Link>
         ) : (
           <Link
-            to="/login"
+            to={loginUrlFor(redirectTo, "login")}
             className="rounded-full border border-subtle py-2.5 text-center font-baloo text-sm font-bold tracking-wide text-muted transition-colors hover:text-text"
           >
             LOG IN

@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { UserRound } from "lucide-react";
 import type { PublicUser, SocialLink } from "shared";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../hooks/use-auth";
+import { Avatar } from "./avatar";
 import { EditProfileModal } from "./edit-profile-modal";
+import { ShareProfileButton } from "./share-profile-button";
 import { SortableSocialLinks } from "./sortable-social-links";
 
 const BIO_MAX_LENGTH = 280;
@@ -19,26 +20,21 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
   return (
     <header className="bg-surface px-4 py-8 sm:px-8">
       <div className="mx-auto flex max-w-5xl flex-col items-start gap-4 sm:flex-row">
-        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full bg-surface-raised">
-          {user.avatarUrl ? (
-            <img src={user.avatarUrl} alt={user.username} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center" role="img" aria-label={user.username}>
-              <UserRound className="h-8 w-8 text-muted" aria-hidden="true" />
-            </div>
-          )}
-        </div>
+        <Avatar url={user.avatarUrl} username={user.username} className="h-20 w-20" />
 
         <div className="w-full min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h1 className="font-baloo text-xl font-bold">{user.username}</h1>
-            <button
-              type="button"
-              onClick={() => setIsEditOpen(true)}
-              className="rounded-full border border-subtle px-4 py-1.5 text-xs font-medium text-muted transition-colors hover:text-text"
-            >
-              Edit profile
-            </button>
+            <div className="flex items-center gap-2">
+              <ShareProfileButton username={user.username} visibility={user.visibility} />
+              <button
+                type="button"
+                onClick={() => setIsEditOpen(true)}
+                className="rounded-full border border-subtle px-4 py-1.5 text-xs font-medium text-muted transition-colors hover:text-text"
+              >
+                Edit profile
+              </button>
+            </div>
           </div>
 
           <BioEditor user={user} onUpdate={updateUser} />

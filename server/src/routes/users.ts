@@ -3,8 +3,12 @@ import { z } from "zod";
 import { del } from "@vercel/blob";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { optionalAuth } from "../middleware/optionalAuth.js";
 import { AUTH_COOKIE_NAME, authCookieOptions, hashPassword } from "../lib/auth.js";
 import { toPublicUser } from "../lib/users.js";
+import { getGroupedLibrary } from "../lib/library.js";
+import { canViewFullProfile, visibleAvatar } from "../lib/visibility.js";
+import type { PublicProfileResponse, UserSearchResult } from "shared";
 
 export const usersRouter = Router();
 
@@ -13,6 +17,7 @@ const updateUserSchema = z.object({
   password: z.string().min(8).optional(),
   bio: z.string().max(280).nullable().optional(),
   avatarUrl: z.string().url().nullable().optional(),
+  visibility: z.enum(["PUBLIC", "FRIENDS", "PRIVATE"]).optional(),
 });
 
 const socialLinkSchema = z.object({
@@ -24,7 +29,9 @@ const reorderSchema = z.object({
   orderedIds: z.array(z.string().min(1)).min(1),
 });
 
-usersRouter.use(requireAuth);
+// Only the /me routes are protected here: the two routes at the bottom of this
+// file set their own auth (search needs a login, the profile link doesn't).
+usersRouter.use("/me", requireAuth);
 
 usersRouter.patch("/me", async (req, res) => {
   const parsed = updateUserSchema.safeParse(req.body);
@@ -32,7 +39,7 @@ usersRouter.patch("/me", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
     return;
   }
-  const { username, password, bio, avatarUrl } = parsed.data;
+  const { username, password, bio, avatarUrl, visibility } = parsed.data;
 
   if (username) {
     const existing = await prisma.user.findUnique({ where: { username } });
@@ -49,6 +56,7 @@ usersRouter.patch("/me", async (req, res) => {
       ...(password && { passwordHash: await hashPassword(password) }),
       ...(bio !== undefined && { bio }),
       ...(avatarUrl !== undefined && { avatarUrl }),
+      ...(visibility !== undefined && { visibility }),
     },
     include: { socialLinks: { orderBy: { order: "asc" } } },
   });
@@ -139,4 +147,73 @@ usersRouter.delete("/me/social-links/:id", async (req, res) => {
 
   await prisma.socialLink.delete({ where: { id: req.params.id } });
   res.status(204).end();
+});
+
+usersRouter.get("/", requireAuth, async (req, res) => {
+  res.set("Cache-Control", "private, no-store");
+
+  const raw = typeof req.query.search === "string" ? req.query.search : "";
+  const q = raw.trim().slice(0, 20);
+  if (q.length < 2) {
+    res.json([]);
+    return;
+  }
+
+  const viewerId = req.userId!;
+  const users = await prisma.user.findMany({
+    where: {
+      username: { contains: q, mode: "insensitive" },
+      visibility: { in: ["PUBLIC", "FRIENDS"] },
+      id: { not: viewerId },
+    },
+    orderBy: { username: "asc" },
+    take: 20,
+    select: { id: true, username: true, avatarUrl: true, visibility: true },
+  });
+
+  const results: UserSearchResult[] = users.map((user) => ({
+    username: user.username,
+    avatarUrl: visibleAvatar(viewerId, user, false),
+  }));
+  res.json(results);
+});
+
+// Must stay last: "/:username" would otherwise swallow the fixed paths above.
+usersRouter.get("/:username", optionalAuth, async (req, res) => {
+  // The answer depends on the viewer's cookie, so it must never be cached and
+  // then served to someone else.
+  res.set("Cache-Control", "private, no-store");
+
+  const owner = await prisma.user.findUnique({
+    where: { username: String(req.params.username) },
+    include: { socialLinks: { orderBy: { order: "asc" } } },
+  });
+  if (!owner) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  const viewerId = req.userId ?? null;
+  if (!canViewFullProfile(viewerId, owner, false)) {
+    const restricted: PublicProfileResponse = {
+      access: "restricted",
+      username: owner.username,
+      visibility: owner.visibility === "PRIVATE" ? "PRIVATE" : "FRIENDS",
+    };
+    res.json(restricted);
+    return;
+  }
+
+  const full: PublicProfileResponse = {
+    access: "full",
+    profile: {
+      username: owner.username,
+      bio: owner.bio,
+      avatarUrl: owner.avatarUrl,
+      visibility: owner.visibility,
+      socialLinks: owner.socialLinks.map(({ id, platform, handle, order }) => ({ id, platform, handle, order })),
+    },
+    library: await getGroupedLibrary(owner.id),
+  };
+  res.json(full);
 });

@@ -10,18 +10,22 @@ export const FAVORITES_DROP_ID = "FAVORITES";
 
 interface FavoritesRowProps {
   favorites: LibraryEntry[];
-  onAddGame: () => void;
-  onChanged: () => void;
+  onAddGame?: () => void;
+  onChanged?: () => void;
+  // Someone else's profile: not a drop target, no add slot, no un-favorite
+  // star, no "Manage favorites" menu.
+  readOnly?: boolean;
 }
 
-export function FavoritesRow({ favorites, onAddGame, onChanged }: FavoritesRowProps) {
+export function FavoritesRow({ favorites, onAddGame, onChanged, readOnly = false }: FavoritesRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
-  const { setNodeRef, isOver } = useDroppable({ id: FAVORITES_DROP_ID });
+  const { setNodeRef, isOver } = useDroppable({ id: FAVORITES_DROP_ID, disabled: readOnly });
   const [isManageOpen, setIsManageOpen] = useState(false);
 
-  // Favorites + the trailing "add a game" slot, treated as one looping sequence.
-  const itemCount = favorites.length + 1;
+  // Favorites (+ the trailing "add a game" slot when it's your own row),
+  // treated as one looping sequence.
+  const itemCount = favorites.length + (readOnly ? 0 : 1);
   // Truncate stale refs from a previous, longer render so index math below
   // never reads a detached node's (always-zero) offsetLeft.
   useEffect(() => {
@@ -57,14 +61,23 @@ export function FavoritesRow({ favorites, onAddGame, onChanged }: FavoritesRowPr
 
   async function handleUnfavorite(entryId: string) {
     await apiFetch(`/library/${entryId}`, { method: "PATCH", body: JSON.stringify({ isFavorite: false }) });
-    onChanged();
+    onChanged?.();
+  }
+
+  if (readOnly && favorites.length === 0) {
+    return (
+      <section>
+        <h2 className="mb-3 text-lg font-bold">Favorites</h2>
+        <p className="text-sm text-muted">No favorites yet.</p>
+      </section>
+    );
   }
 
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-bold">Favorites</h2>
-        {favorites.length > 0 && (
+        {!readOnly && favorites.length > 0 && (
           <button
             type="button"
             onClick={() => setIsManageOpen(true)}
@@ -86,27 +99,31 @@ export function FavoritesRow({ favorites, onAddGame, onChanged }: FavoritesRowPr
               className="group relative shrink-0"
             >
               <GameCover coverUrl={entry.game.coverUrl} title={entry.game.title} className="w-24 sm:w-28" />
-              <button
-                type="button"
-                onClick={() => void handleUnfavorite(entry.id)}
-                aria-label={`Remove ${entry.game.title} from favorites`}
-                className="absolute right-1 top-1 rounded-full bg-background/60 p-1 text-accent-light opacity-0 transition group-hover:opacity-100 hover:scale-110 hover:text-muted"
-              >
-                <Star className="h-4 w-4 fill-current hover:fill-none" />
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => void handleUnfavorite(entry.id)}
+                  aria-label={`Remove ${entry.game.title} from favorites`}
+                  className="absolute right-1 top-1 rounded-full bg-background/60 p-1 text-accent-light opacity-0 transition group-hover:opacity-100 hover:scale-110 hover:text-muted"
+                >
+                  <Star className="h-4 w-4 fill-current hover:fill-none" />
+                </button>
+              )}
             </div>
           ))}
-          <button
-            ref={(el) => {
-              itemRefs.current[favorites.length] = el;
-            }}
-            type="button"
-            onClick={onAddGame}
-            aria-label="Add a game to your favorites"
-            className="flex aspect-3/4 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed border-subtle text-muted transition-colors hover:text-text sm:w-28"
-          >
-            <Plus className="h-6 w-6" />
-          </button>
+          {!readOnly && (
+            <button
+              ref={(el) => {
+                itemRefs.current[favorites.length] = el;
+              }}
+              type="button"
+              onClick={onAddGame}
+              aria-label="Add a game to your favorites"
+              className="flex aspect-3/4 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed border-subtle text-muted transition-colors hover:text-text sm:w-28"
+            >
+              <Plus className="h-6 w-6" />
+            </button>
+          )}
         </div>
         {itemCount > 1 && (
           <>
@@ -129,12 +146,14 @@ export function FavoritesRow({ favorites, onAddGame, onChanged }: FavoritesRowPr
           </>
         )}
       </div>
-      <ManageFavoritesModal
-        open={isManageOpen}
-        onClose={() => setIsManageOpen(false)}
-        favorites={favorites}
-        onChanged={onChanged}
-      />
+      {!readOnly && (
+        <ManageFavoritesModal
+          open={isManageOpen}
+          onClose={() => setIsManageOpen(false)}
+          favorites={favorites}
+          onChanged={onChanged ?? (() => {})}
+        />
+      )}
     </section>
   );
 }

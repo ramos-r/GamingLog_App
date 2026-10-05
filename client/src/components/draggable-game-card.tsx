@@ -5,7 +5,7 @@ import { GameCard } from "./game-card";
 
 interface DraggableGameCardProps {
   entry: LibraryEntry;
-  onChanged: () => void;
+  onChanged?: () => void;
 }
 
 export function DraggableGameCard({ entry, onChanged }: DraggableGameCardProps) {

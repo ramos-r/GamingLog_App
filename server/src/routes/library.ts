@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
-import { Category } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
+import { getGroupedLibrary } from "../lib/library.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 
 export const libraryRouter = Router();
@@ -26,18 +26,7 @@ const updateLibrarySchema = z.object({
 libraryRouter.use(requireAuth);
 
 libraryRouter.get("/", async (req, res) => {
-  const entries = await prisma.userGame.findMany({
-    where: { userId: req.userId },
-    include: { game: true },
-    orderBy: { addedAt: "desc" },
-  });
-
-  res.json({
-    playing: entries.filter((entry) => entry.category === Category.PLAYING),
-    playedBefore: entries.filter((entry) => entry.category === Category.PLAYED_BEFORE),
-    wantToPlay: entries.filter((entry) => entry.category === Category.WANT_TO_PLAY),
-    favorites: entries.filter((entry) => entry.isFavorite),
-  });
+  res.json(await getGroupedLibrary(req.userId!));
 });
 
 libraryRouter.post("/", async (req, res) => {

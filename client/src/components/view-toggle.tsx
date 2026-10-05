@@ -27,7 +27,25 @@ export function ViewToggle({ value, onChange }: ViewToggleProps) {
     const index = OPTIONS.findIndex((option) => option.value === value);
     const button = buttonRefs.current[index];
     if (!button) return;
-    setPillRect({ left: button.offsetLeft, top: button.offsetTop, width: button.offsetWidth, height: button.offsetHeight });
+
+    function measure() {
+      if (!button) return;
+      const next = { left: button.offsetLeft, top: button.offsetTop, width: button.offsetWidth, height: button.offsetHeight };
+      setPillRect((prev) =>
+        prev && prev.left === next.left && prev.top === next.top && prev.width === next.width && prev.height === next.height
+          ? prev
+          : next,
+      );
+    }
+
+    measure();
+    // The buttons change size after first paint (web font finishing loading,
+    // viewport changes), so re-measure instead of trusting the first reading.
+    const observer = new ResizeObserver(measure);
+    buttonRefs.current.forEach((el) => {
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
   }, [value]);
 
   return (

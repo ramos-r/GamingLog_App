@@ -10,12 +10,25 @@ export interface SocialLink {
   order: number;
 }
 
+export type Visibility = "PUBLIC" | "FRIENDS" | "PRIVATE";
+
 export interface PublicUser {
   id: string;
   username: string;
   bio: string | null;
   avatarUrl: string | null;
+  visibility: Visibility;
   createdAt: Date;
+  socialLinks: SocialLink[];
+}
+
+// What someone else is allowed to see of a profile. Deliberately has no `id`
+// or `createdAt` — the owner's internal id never leaves the server.
+export interface ProfileSummary {
+  username: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  visibility: Visibility;
   socialLinks: SocialLink[];
 }
 
@@ -53,6 +66,11 @@ export interface DuplicateGameError {
 
 export type Category = "PLAYING" | "PLAYED_BEFORE" | "WANT_TO_PLAY";
 
+// A catalog game as it appears inside a library. `addedById` is left out:
+// for a game the owner added themselves it would hand their internal user id
+// to whoever is viewing their profile.
+export type LibraryGame = Omit<CatalogGame, "addedById">;
+
 export interface LibraryEntry {
   id: string;
   category: Category;
@@ -61,7 +79,7 @@ export interface LibraryEntry {
   isFavorite: boolean;
   addedAt: Date;
   updatedAt: Date;
-  game: CatalogGame;
+  game: LibraryGame;
 }
 
 export interface LibraryResponse {
@@ -69,6 +87,15 @@ export interface LibraryResponse {
   playedBefore: LibraryEntry[];
   wantToPlay: LibraryEntry[];
   favorites: LibraryEntry[];
+}
+
+export type PublicProfileResponse =
+  | { access: "full"; profile: ProfileSummary; library: LibraryResponse }
+  | { access: "restricted"; username: string; visibility: "FRIENDS" | "PRIVATE" };
+
+export interface UserSearchResult {
+  username: string;
+  avatarUrl: string | null;
 }
 
 export interface AddToLibraryInput {
@@ -107,6 +134,7 @@ export interface UpdateUserInput {
   password?: string;
   bio?: string | null;
   avatarUrl?: string | null;
+  visibility?: Visibility;
 }
 
 export interface SocialLinkInput {

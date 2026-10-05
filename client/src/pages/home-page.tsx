@@ -12,6 +12,7 @@ import {
 } from "@dnd-kit/core";
 import type { Category, LibraryEntry, LibraryResponse } from "shared";
 import { useAuth } from "../hooks/use-auth";
+import { TopNav } from "../components/top-nav";
 import { apiFetch } from "../lib/api";
 import { ProfileHeader } from "../components/profile-header";
 import { FavoritesRow, FAVORITES_DROP_ID } from "../components/favorites-row";
@@ -24,7 +25,7 @@ import { AllGamesGrid } from "../components/all-games-grid";
 type ViewMode = "category" | "all";
 
 export function HomePage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [library, setLibrary] = useState<LibraryResponse | null>(null);
   const [isAddGameOpen, setIsAddGameOpen] = useState(false);
   const [activeEntry, setActiveEntry] = useState<LibraryEntry | null>(null);
@@ -119,11 +120,7 @@ export function HomePage() {
 
   return (
     <main className="min-h-screen bg-background pb-16 text-text">
-      <div className="flex justify-end px-4 pt-3 sm:px-8">
-        <button type="button" onClick={() => void logout()} className="text-xs text-muted transition-colors hover:text-text">
-          Log out
-        </button>
-      </div>
+      <TopNav />
 
       <ProfileHeader user={user} />
 

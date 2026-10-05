@@ -8,12 +8,19 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum Visibility {
+  PUBLIC // anyone, logged in or not, sees the full profile
+  FRIENDS // only accepted friends see the full profile; others see the username
+  PRIVATE // only the owner sees the profile; never listed in user search
+}
+
 model User {
   id           String       @id @default(cuid())
   username     String       @unique
   passwordHash String
   bio          String?      @db.VarChar(280)
   avatarUrl    String?
+  visibility   Visibility   @default(FRIENDS)
   socialLinks  SocialLink[]
   games        UserGame[]
   createdAt    DateTime     @default(now())

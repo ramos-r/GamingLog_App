@@ -1,13 +1,14 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserRound, X } from "lucide-react";
-import type { PublicUser, SocialLink } from "shared";
+import type { PublicUser, SocialLink, Visibility } from "shared";
 import { apiFetch, ApiError } from "../lib/api";
 import { uploadFile } from "../lib/upload";
 import { SOCIAL_PLATFORM_OPTIONS } from "../lib/social-platforms";
 import { useAuth } from "../hooks/use-auth";
 import { Modal } from "./modal";
 import { SocialPlatformSelect } from "./social-platform-select";
+import { VisibilitySelect } from "./visibility-select";
 
 const BIO_MAX_LENGTH = 280;
 
@@ -44,6 +45,7 @@ function EditProfileForm({ user, onUpdated, onClose }: EditProfileFormProps) {
   const [username, setUsername] = useState(user.username);
   const [password, setPassword] = useState("");
   const [bio, setBio] = useState(user.bio ?? "");
+  const [visibility, setVisibility] = useState<Visibility>(user.visibility);
   const [links, setLinks] = useState<LinkRow[]>(user.socialLinks.map((link) => ({ ...link })));
   const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -133,10 +135,11 @@ function EditProfileForm({ user, onUpdated, onClose }: EditProfileFormProps) {
         }
       }
 
-      const changes: { username?: string; password?: string; bio?: string | null } = {};
+      const changes: { username?: string; password?: string; bio?: string | null; visibility?: Visibility } = {};
       if (username !== user.username) changes.username = username;
       if (password) changes.password = password;
       if (bio !== (user.bio ?? "")) changes.bio = bio || null;
+      if (visibility !== user.visibility) changes.visibility = visibility;
 
       const updated =
         Object.keys(changes).length > 0
@@ -261,6 +264,13 @@ function EditProfileForm({ user, onUpdated, onClose }: EditProfileFormProps) {
         >
           + Add platform
         </button>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="profile-visibility" className="text-xs text-muted">
+          Privacy
+        </label>
+        <VisibilitySelect id="profile-visibility" value={visibility} onChange={setVisibility} />
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
