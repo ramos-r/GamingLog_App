@@ -10,6 +10,7 @@ import { RegisterPage } from "./pages/register-page";
 const PublicProfilePage = lazy(() =>
   import("./pages/public-profile-page").then((module) => ({ default: module.PublicProfilePage })),
 );
+const FriendsPage = lazy(() => import("./pages/friends-page").then((module) => ({ default: module.FriendsPage })));
 const PeoplePage = lazy(() => import("./pages/people-page").then((module) => ({ default: module.PeoplePage })));
 
 export function App() {
@@ -24,6 +25,7 @@ export function App() {
           <Route path="/u/:username" element={<PublicProfilePage />} />
           <Route element={<RequireAuth />}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/friends" element={<FriendsPage />} />
             <Route path="/people" element={<PeoplePage />} />
           </Route>
         </Routes>

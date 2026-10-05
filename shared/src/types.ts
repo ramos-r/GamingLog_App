@@ -89,13 +89,50 @@ export interface LibraryResponse {
   favorites: LibraryEntry[];
 }
 
+// Friendship as seen from the viewer's side.
+export type FriendshipState = "NONE" | "OUTGOING_PENDING" | "INCOMING_PENDING" | "FRIENDS";
+
+export interface ViewerFriendship {
+  state: FriendshipState;
+  // Set whenever a row exists, so a page can accept, decline or cancel in place.
+  friendshipId: string | null;
+}
+
+// `friendship` is null when the viewer is logged out.
 export type PublicProfileResponse =
-  | { access: "full"; profile: ProfileSummary; library: LibraryResponse }
-  | { access: "restricted"; username: string; visibility: "FRIENDS" | "PRIVATE" };
+  | { access: "full"; profile: ProfileSummary; library: LibraryResponse; friendship: ViewerFriendship | null }
+  | {
+      access: "restricted";
+      username: string;
+      visibility: "FRIENDS" | "PRIVATE";
+      friendship: ViewerFriendship | null;
+    };
 
 export interface UserSearchResult {
   username: string;
   avatarUrl: string | null;
+  friendship: ViewerFriendship;
+}
+
+export interface FriendListItem {
+  friendshipId: string;
+  username: string;
+  avatarUrl: string | null;
+}
+
+export interface FriendsResponse {
+  friends: FriendListItem[];
+  incoming: FriendListItem[];
+  outgoing: FriendListItem[];
+}
+
+export interface FriendRequestCount {
+  incoming: number;
+}
+
+export interface SendFriendRequestResponse {
+  status: "PENDING" | "ACCEPTED";
+  friendshipId: string;
 }
 
 export interface AddToLibraryInput {

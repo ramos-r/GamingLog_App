@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
-import type { UserSearchResult } from "shared";
+import type { FriendshipState, UserSearchResult } from "shared";
 import { apiFetch } from "../lib/api";
 import { TopNav } from "../components/top-nav";
 import { Avatar } from "../components/avatar";
+
+const STATUS_LABELS: Record<FriendshipState, string | null> = {
+  NONE: null,
+  OUTGOING_PENDING: "Request sent",
+  INCOMING_PENDING: "Wants to be friends",
+  FRIENDS: "Friends",
+};
 
 // The outcome of one search, tagged with the term it was for so results for
 // an older term are never shown against what's currently typed.
@@ -90,7 +97,10 @@ export function PeoplePage() {
                     className="flex items-center gap-3 rounded-lg bg-surface p-3 transition-colors hover:bg-surface-raised"
                   >
                     <Avatar url={result.avatarUrl} username={result.username} className="h-10 w-10" />
-                    <span className="min-w-0 break-all font-baloo text-sm font-medium">{result.username}</span>
+                    <span className="min-w-0 flex-1 break-all font-baloo text-sm font-medium">{result.username}</span>
+                    {STATUS_LABELS[result.friendship.state] && (
+                      <span className="shrink-0 text-xs text-muted">{STATUS_LABELS[result.friendship.state]}</span>
+                    )}
                   </Link>
                 </li>
               ))}

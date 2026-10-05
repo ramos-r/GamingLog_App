@@ -7,6 +7,7 @@ import { optionalAuth } from "../middleware/optionalAuth.js";
 import { AUTH_COOKIE_NAME, authCookieOptions, hashPassword } from "../lib/auth.js";
 import { toPublicUser } from "../lib/users.js";
 import { getGroupedLibrary } from "../lib/library.js";
+import { findFriendship, otherUserId, pairKey, toViewerFriendship } from "../lib/friends.js";
 import { canViewFullProfile, visibleAvatar } from "../lib/visibility.js";
 import type { PublicProfileResponse, UserSearchResult } from "shared";
 
@@ -171,10 +172,21 @@ usersRouter.get("/", requireAuth, async (req, res) => {
     select: { id: true, username: true, avatarUrl: true, visibility: true },
   });
 
-  const results: UserSearchResult[] = users.map((user) => ({
-    username: user.username,
-    avatarUrl: visibleAvatar(viewerId, user, false),
-  }));
+  // One query for the viewer's friendship with every result.
+  const rows =
+    users.length === 0
+      ? []
+      : await prisma.friendship.findMany({ where: { OR: users.map((user) => pairKey(viewerId, user.id)) } });
+  const rowByOtherUser = new Map(rows.map((row) => [otherUserId(row, viewerId), row]));
+
+  const results: UserSearchResult[] = users.map((user) => {
+    const row = rowByOtherUser.get(user.id) ?? null;
+    return {
+      username: user.username,
+      avatarUrl: visibleAvatar(viewerId, user, row?.status === "ACCEPTED"),
+      friendship: toViewerFriendship(row, viewerId),
+    };
+  });
   res.json(results);
 });
 
@@ -194,11 +206,16 @@ usersRouter.get("/:username", optionalAuth, async (req, res) => {
   }
 
   const viewerId = req.userId ?? null;
-  if (!canViewFullProfile(viewerId, owner, false)) {
+  const row = viewerId !== null && viewerId !== owner.id ? await findFriendship(viewerId, owner.id) : null;
+  const isFriend = row?.status === "ACCEPTED";
+  const friendship = viewerId !== null ? toViewerFriendship(row, viewerId) : null;
+
+  if (!canViewFullProfile(viewerId, owner, isFriend)) {
     const restricted: PublicProfileResponse = {
       access: "restricted",
       username: owner.username,
       visibility: owner.visibility === "PRIVATE" ? "PRIVATE" : "FRIENDS",
+      friendship,
     };
     res.json(restricted);
     return;
@@ -214,6 +231,7 @@ usersRouter.get("/:username", optionalAuth, async (req, res) => {
       socialLinks: owner.socialLinks.map(({ id, platform, handle, order }) => ({ id, platform, handle, order })),
     },
     library: await getGroupedLibrary(owner.id),
+    friendship,
   };
   res.json(full);
 });

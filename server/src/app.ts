@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { authRouter } from "./routes/auth.js";
 import { catalogRouter } from "./routes/catalog.js";
+import { friendsRouter } from "./routes/friends.js";
 import { libraryRouter } from "./routes/library.js";
 import { uploadsRouter } from "./routes/uploads.js";
 import { usersRouter } from "./routes/users.js";
@@ -21,6 +22,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/catalog", catalogRouter);
+app.use("/api/friends", friendsRouter);
 app.use("/api/library", libraryRouter);
 app.use("/api/uploads", uploadsRouter);
 app.use("/api/users", usersRouter);

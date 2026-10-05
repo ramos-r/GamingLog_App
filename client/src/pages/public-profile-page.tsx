@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { Lock } from "lucide-react";
 import type { PublicProfileResponse } from "shared";
@@ -6,6 +6,7 @@ import { useAuth } from "../hooks/use-auth";
 import { ApiError, apiFetch } from "../lib/api";
 import { TopNav } from "../components/top-nav";
 import { Avatar } from "../components/avatar";
+import { FriendButton } from "../components/friend-button";
 import { PublicProfileHeader } from "../components/public-profile-header";
 import { ViewToggle } from "../components/view-toggle";
 import { FavoritesRow } from "../components/favorites-row";
@@ -27,7 +28,10 @@ export function PublicProfilePage() {
   const { user, isLoading } = useAuth();
   const [state, setState] = useState<PageState | null>(null);
   const [viewMode, setViewMode] = useState<"category" | "all">("category");
+  const [reloadKey, setReloadKey] = useState(0);
   const viewerId = user?.id;
+  // Bumped after a friend action so the page refetches what it may now show.
+  const refetch = useCallback(() => setReloadKey((key) => key + 1), []);
 
   useEffect(() => {
     // Wait until we know whether the visitor is logged in: the answer depends
@@ -48,7 +52,7 @@ export function PublicProfilePage() {
     return () => {
       ignore = true;
     };
-  }, [username, viewerId, isLoading]);
+  }, [username, viewerId, isLoading, reloadKey]);
 
   if (!isLoading && user && user.username === username) {
     return <Navigate to="/" replace />;
@@ -94,6 +98,12 @@ export function PublicProfilePage() {
             <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
             {data.visibility === "PRIVATE" ? "This profile is private." : "Only friends can see this profile."}
           </p>
+          <FriendButton
+            username={data.username}
+            friendship={data.friendship}
+            profileVisibility={data.visibility}
+            onChanged={refetch}
+          />
         </MessageCard>
       </PageShell>
     );
@@ -103,7 +113,17 @@ export function PublicProfilePage() {
 
   return (
     <PageShell>
-      <PublicProfileHeader profile={profile} />
+      <PublicProfileHeader
+        profile={profile}
+        actions={
+          <FriendButton
+            username={profile.username}
+            friendship={data.friendship}
+            profileVisibility={profile.visibility}
+            onChanged={refetch}
+          />
+        }
+      />
 
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-8">
         <ViewToggle value={viewMode} onChange={setViewMode} />

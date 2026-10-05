@@ -24,6 +24,35 @@ model User {
   socialLinks  SocialLink[]
   games        UserGame[]
   createdAt    DateTime     @default(now())
+
+  friendshipsAsA Friendship[] @relation("FriendshipsAsA")
+  friendshipsAsB Friendship[] @relation("FriendshipsAsB")
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+// One row per pair of users, whichever of them sent the request. The pair is
+// always stored in canonical order (userAId < userBId) so the unique
+// constraint makes a duplicate or crossed request impossible at the database
+// level.
+model Friendship {
+  id          String           @id @default(cuid())
+  userAId     String
+  userBId     String
+  requesterId String // which of userAId / userBId sent the request
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  acceptedAt  DateTime?
+
+  userA User @relation("FriendshipsAsA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB User @relation("FriendshipsAsB", fields: [userBId], references: [id], onDelete: Cascade)
+
+  @@unique([userAId, userBId])
+  @@index([userAId, status])
+  @@index([userBId, status])
 }
 
 model SocialLink {
