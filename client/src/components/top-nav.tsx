@@ -4,19 +4,26 @@ import { useAuth } from "../hooks/use-auth";
 import { useFriendsPanel } from "../hooks/use-friends-panel";
 import { useIncomingRequestCount } from "../hooks/use-incoming-request-count";
 import { FRIENDS_PANEL_ID, FRIENDS_TOGGLE_ID } from "../lib/friends-panel-context";
+import { cn } from "../lib/cn";
 import { loginUrlFor } from "../lib/safe-redirect";
 
 const linkClass = "flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-text";
 
 // Shown on every logged-in page and on /u/:username.
-export function TopNav() {
+interface TopNavProps {
+  // Pages that open with the profile header give the bar the same background
+  // as the header, so the two read as one block.
+  className?: string;
+}
+
+export function TopNav({ className }: TopNavProps) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const { isOpen, toggle } = useFriendsPanel();
   const pending = useIncomingRequestCount(Boolean(user));
 
   return (
-    <nav aria-label="Main" className="flex items-center justify-between px-4 py-3 sm:px-8">
+    <nav aria-label="Main" className={cn("flex items-center justify-between px-4 py-3 sm:px-8", className)}>
       <Link
         to="/"
         className="bg-accent-gradient bg-clip-text font-baloo text-lg font-bold text-transparent transition-opacity hover:opacity-80"

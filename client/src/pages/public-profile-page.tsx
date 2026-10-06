@@ -112,7 +112,7 @@ export function PublicProfilePage() {
   const { profile, library } = data;
 
   return (
-    <PageShell>
+    <PageShell navClassName="bg-surface">
       <PublicProfileHeader
         profile={profile}
         actions={
@@ -156,10 +156,10 @@ export function PublicProfilePage() {
   );
 }
 
-function PageShell({ children }: { children: ReactNode }) {
+function PageShell({ children, navClassName }: { children: ReactNode; navClassName?: string }) {
   return (
     <main className="min-h-screen bg-background pb-16 text-text">
-      <TopNav />
+      <TopNav className={navClassName} />
       {children}
     </main>
   );

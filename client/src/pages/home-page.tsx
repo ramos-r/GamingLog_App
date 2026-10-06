@@ -120,7 +120,7 @@ export function HomePage() {
 
   return (
     <main className="min-h-screen bg-background pb-16 text-text">
-      <TopNav />
+      <TopNav className="bg-surface" />
 
       <ProfileHeader user={user} />
 
