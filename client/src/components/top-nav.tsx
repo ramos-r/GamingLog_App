@@ -1,7 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import { Search, Users } from "lucide-react";
 import { useAuth } from "../hooks/use-auth";
+import { useFriendsPanel } from "../hooks/use-friends-panel";
 import { useIncomingRequestCount } from "../hooks/use-incoming-request-count";
+import { FRIENDS_PANEL_ID, FRIENDS_TOGGLE_ID } from "../lib/friends-panel-context";
 import { loginUrlFor } from "../lib/safe-redirect";
 
 const linkClass = "flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-text";
@@ -10,6 +12,7 @@ const linkClass = "flex items-center gap-1.5 text-xs text-muted transition-color
 export function TopNav() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const { isOpen, toggle } = useFriendsPanel();
   const pending = useIncomingRequestCount(Boolean(user));
 
   return (
@@ -28,8 +31,12 @@ export function TopNav() {
               <Search className="h-4 w-4" aria-hidden="true" />
               <span className="hidden sm:inline">Find people</span>
             </Link>
-            <Link
-              to={pending > 0 ? "/friends?tab=requests" : "/friends"}
+            <button
+              type="button"
+              id={FRIENDS_TOGGLE_ID}
+              onClick={toggle}
+              aria-expanded={isOpen}
+              aria-controls={FRIENDS_PANEL_ID}
               aria-label={pending > 0 ? `Friends, ${pending} pending ${pending === 1 ? "request" : "requests"}` : "Friends"}
               className={linkClass}
             >
@@ -43,7 +50,7 @@ export function TopNav() {
                   {pending}
                 </span>
               )}
-            </Link>
+            </button>
             <button type="button" onClick={() => void logout()} className={linkClass}>
               Log out
             </button>
