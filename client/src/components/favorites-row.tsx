@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, MoreHorizontal, Plus, Star } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { LibraryEntry } from "shared";
 import { apiFetch } from "../lib/api";
+import { favoriteDragId } from "../lib/drag-ids";
 import { GameCover } from "./game-cover";
 import { ManageFavoritesModal } from "./manage-favorites-modal";
 
@@ -12,8 +15,8 @@ interface FavoritesRowProps {
   favorites: LibraryEntry[];
   onAddGame?: () => void;
   onChanged?: () => void;
-  // Someone else's profile: not a drop target, no add slot, no un-favorite
-  // star, no "Manage favorites" menu.
+  // Someone else's profile: not a drop target or sortable, no add slot, no
+  // un-favorite star, no "Manage favorites" menu.
   readOnly?: boolean;
 }
 
@@ -59,6 +62,10 @@ export function FavoritesRow({ favorites, onAddGame, onChanged, readOnly = false
     scrollToIndex(atStart ? itemCount - 1 : currentIndex(el) - 1);
   }
 
+  function registerItem(index: number, el: HTMLElement | null) {
+    itemRefs.current[index] = el;
+  }
+
   async function handleUnfavorite(entryId: string) {
     await apiFetch(`/library/${entryId}`, { method: "PATCH", body: JSON.stringify({ isFavorite: false }) });
     onChanged?.();
@@ -90,27 +97,27 @@ export function FavoritesRow({ favorites, onAddGame, onChanged, readOnly = false
       </div>
       <div ref={setNodeRef} className={`relative rounded-lg bg-surface p-4 transition-colors ${isOver ? "bg-surface-raised/60" : ""}`}>
         <div ref={scrollRef} className="no-scrollbar flex gap-3 overflow-x-auto scroll-smooth">
-          {favorites.map((entry, index) => (
-            <div
-              key={entry.id}
-              ref={(el) => {
-                itemRefs.current[index] = el;
-              }}
-              className="group relative shrink-0"
-            >
-              <GameCover coverUrl={entry.game.coverUrl} title={entry.game.title} className="w-24 sm:w-28" />
-              {!readOnly && (
-                <button
-                  type="button"
-                  onClick={() => void handleUnfavorite(entry.id)}
-                  aria-label={`Remove ${entry.game.title} from favorites`}
-                  className="absolute right-1 top-1 rounded-full bg-background/60 p-1 text-accent-light opacity-0 transition group-hover:opacity-100 hover:scale-110 hover:text-muted"
-                >
-                  <Star className="h-4 w-4 fill-current hover:fill-none" />
-                </button>
-              )}
-            </div>
-          ))}
+          <SortableContext
+            items={favorites.map((entry) => favoriteDragId(entry.id))}
+            strategy={horizontalListSortingStrategy}
+            disabled={readOnly}
+          >
+            {favorites.map((entry, index) =>
+              readOnly ? (
+                <div key={entry.id} ref={(el) => registerItem(index, el)} className="relative shrink-0">
+                  <GameCover coverUrl={entry.game.coverUrl} title={entry.game.title} className="w-24 sm:w-28" />
+                </div>
+              ) : (
+                <SortableFavorite
+                  key={entry.id}
+                  entry={entry}
+                  index={index}
+                  registerItem={registerItem}
+                  onUnfavorite={handleUnfavorite}
+                />
+              ),
+            )}
+          </SortableContext>
           {!readOnly && (
             <button
               ref={(el) => {
@@ -155,5 +162,43 @@ export function FavoritesRow({ favorites, onAddGame, onChanged, readOnly = false
         />
       )}
     </section>
+  );
+}
+
+interface SortableFavoriteProps {
+  entry: LibraryEntry;
+  index: number;
+  registerItem: (index: number, el: HTMLElement | null) => void;
+  onUnfavorite: (entryId: string) => Promise<void>;
+}
+
+// One favorite in your own row: draggable to a new place in the row. The
+// carousel's scroll math still gets the element through `registerItem`.
+function SortableFavorite({ entry, index, registerItem, onUnfavorite }: SortableFavoriteProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: favoriteDragId(entry.id),
+  });
+
+  return (
+    <div
+      ref={(el) => {
+        setNodeRef(el);
+        registerItem(index, el);
+      }}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={`group relative shrink-0 ${isDragging ? "opacity-40" : ""}`}
+      {...listeners}
+      {...attributes}
+    >
+      <GameCover coverUrl={entry.game.coverUrl} title={entry.game.title} className="w-24 sm:w-28" />
+      <button
+        type="button"
+        onClick={() => void onUnfavorite(entry.id)}
+        aria-label={`Remove ${entry.game.title} from favorites`}
+        className="absolute right-1 top-1 rounded-full bg-background/60 p-1 text-accent-light opacity-0 transition group-hover:opacity-100 hover:scale-110 hover:text-muted"
+      >
+        <Star className="h-4 w-4 fill-current hover:fill-none" />
+      </button>
+    </div>
   );
 }

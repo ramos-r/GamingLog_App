@@ -5,35 +5,74 @@ import {
   DragOverlay,
   KeyboardSensor,
   PointerSensor,
+  pointerWithin,
+  rectIntersection,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import type { Category, LibraryEntry, LibraryResponse } from "shared";
+import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import type { Category, LibraryEntry, LibraryResponse, OrderScope } from "shared";
 import { useAuth } from "../hooks/use-auth";
 import { TopNav } from "../components/top-nav";
 import { apiFetch } from "../lib/api";
+import { parseFavoriteDragId } from "../lib/drag-ids";
 import { ProfileHeader } from "../components/profile-header";
 import { FavoritesRow, FAVORITES_DROP_ID } from "../components/favorites-row";
 import { CategorySection } from "../components/category-section";
 import { GameCard } from "../components/game-card";
+import { GameCover } from "../components/game-cover";
 import { AddGameModal } from "../components/add-game-modal";
 import { ViewToggle } from "../components/view-toggle";
 import { AllGamesGrid } from "../components/all-games-grid";
 
 type ViewMode = "category" | "all";
 
+type CategoryKey = "playing" | "playedBefore" | "wantToPlay";
+
+const CATEGORY_KEYS: Record<Category, CategoryKey> = {
+  PLAYING: "playing",
+  PLAYED_BEFORE: "playedBefore",
+  WANT_TO_PLAY: "wantToPlay",
+};
+
+// The sections a card or favorite can be dropped on, as opposed to the cards
+// and favorites inside them.
+const CONTAINER_IDS = new Set<string>([FAVORITES_DROP_ID, ...Object.keys(CATEGORY_KEYS)]);
+
+// Dropping on a card means "put it here", dropping on the section around the
+// cards means "put it at the end". Both are under the pointer at once, so the
+// card has to win. With the keyboard there is no pointer, so it falls back to
+// whatever the dragged item overlaps.
+const collisionDetection: CollisionDetection = (args) => {
+  const collisions = pointerWithin(args);
+  const found = collisions.length > 0 ? collisions : rectIntersection(args);
+  const inner = found.filter((collision) => !CONTAINER_IDS.has(String(collision.id)));
+  return inner.length > 0 ? inner : found;
+};
+
+// What's being dragged: a card from a category, or a favorite from the row.
+type ActiveDrag = { entry: LibraryEntry; kind: "card" | "favorite" };
+
+function saveOrder(scope: OrderScope, entries: LibraryEntry[]) {
+  return apiFetch("/library/order", {
+    method: "PUT",
+    body: JSON.stringify({ scope, ids: entries.map((entry) => entry.id) }),
+  });
+}
+
 export function HomePage() {
   const { user } = useAuth();
   const [library, setLibrary] = useState<LibraryResponse | null>(null);
   const [isAddGameOpen, setIsAddGameOpen] = useState(false);
-  const [activeEntry, setActiveEntry] = useState<LibraryEntry | null>(null);
+  const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("category");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   function refreshLibrary() {
@@ -44,74 +83,130 @@ export function HomePage() {
     void refreshLibrary();
   }, []);
 
-  function findEntry(entryId: string): LibraryEntry | undefined {
+  function findCardEntry(entryId: string): LibraryEntry | undefined {
     if (!library) return undefined;
     return [...library.playing, ...library.playedBefore, ...library.wantToPlay].find((e) => e.id === entryId);
   }
 
   function handleDragStart(event: DragStartEvent) {
-    setActiveEntry(findEntry(event.active.id as string) ?? null);
+    if (!library) return;
+    const activeId = String(event.active.id);
+    const favoriteId = parseFavoriteDragId(activeId);
+    if (favoriteId) {
+      const entry = library.favorites.find((e) => e.id === favoriteId);
+      setActiveDrag(entry ? { entry, kind: "favorite" } : null);
+      return;
+    }
+    const entry = findCardEntry(activeId);
+    setActiveDrag(entry ? { entry, kind: "card" } : null);
+  }
+
+  // The screen has already been updated; if saving fails, show what the server
+  // actually has instead of guessing how to undo it.
+  async function persist(save: () => Promise<unknown>) {
+    try {
+      await save();
+    } catch {
+      await refreshLibrary();
+    }
   }
 
   async function handleDragEnd(event: DragEndEvent) {
-    setActiveEntry(null);
+    setActiveDrag(null);
     const { active, over } = event;
     if (!over || !library) return;
 
-    const entry = findEntry(active.id as string);
-    if (!entry) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    const overFavoriteId = parseFavoriteDragId(overId);
 
-    if (over.id === FAVORITES_DROP_ID) {
-      if (entry.isFavorite) return;
+    // A favorite dragged within the row: reorder it.
+    const draggedFavoriteId = parseFavoriteDragId(activeId);
+    if (draggedFavoriteId) {
+      if (!overFavoriteId || overFavoriteId === draggedFavoriteId) return;
+      const from = library.favorites.findIndex((e) => e.id === draggedFavoriteId);
+      const to = library.favorites.findIndex((e) => e.id === overFavoriteId);
+      if (from === -1 || to === -1) return;
 
-      const previousLibrary = library;
-      const updatedEntry: LibraryEntry = { ...entry, isFavorite: true };
-      const replaceEntry = (entries: LibraryEntry[]) => entries.map((e) => (e.id === entry.id ? updatedEntry : e));
-
-      setLibrary((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          playing: replaceEntry(prev.playing),
-          playedBefore: replaceEntry(prev.playedBefore),
-          wantToPlay: replaceEntry(prev.wantToPlay),
-          favorites: [...prev.favorites, updatedEntry],
-        };
-      });
-
-      try {
-        await apiFetch(`/library/${entry.id}`, { method: "PATCH", body: JSON.stringify({ isFavorite: true }) });
-      } catch {
-        setLibrary(previousLibrary);
-      }
+      const favorites = arrayMove(library.favorites, from, to);
+      setLibrary({ ...library, favorites });
+      await persist(() => saveOrder("FAVORITES", favorites));
       return;
     }
 
-    const newCategory = over.id as Category;
-    if (entry.category === newCategory) return;
+    const entry = findCardEntry(activeId);
+    if (!entry) return;
 
-    const previousLibrary = library;
-    const updatedEntry: LibraryEntry = { ...entry, category: newCategory };
-    const withoutEntry = (entries: LibraryEntry[]) => entries.filter((e) => e.id !== entry.id);
+    // A card dropped on the Favorites row: favorite it, in the spot it landed.
+    if (overId === FAVORITES_DROP_ID || overFavoriteId) {
+      if (entry.isFavorite) return;
 
-    setLibrary((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        playing: newCategory === "PLAYING" ? [...withoutEntry(prev.playing), updatedEntry] : withoutEntry(prev.playing),
-        playedBefore:
-          newCategory === "PLAYED_BEFORE" ? [...withoutEntry(prev.playedBefore), updatedEntry] : withoutEntry(prev.playedBefore),
-        wantToPlay:
-          newCategory === "WANT_TO_PLAY" ? [...withoutEntry(prev.wantToPlay), updatedEntry] : withoutEntry(prev.wantToPlay),
-        favorites: prev.favorites.map((e) => (e.id === entry.id ? updatedEntry : e)),
-      };
+      const updatedEntry: LibraryEntry = { ...entry, isFavorite: true };
+      const replaceEntry = (entries: LibraryEntry[]) => entries.map((e) => (e.id === entry.id ? updatedEntry : e));
+      const dropIndex = overFavoriteId ? library.favorites.findIndex((e) => e.id === overFavoriteId) : -1;
+      const favorites = [...library.favorites];
+      favorites.splice(dropIndex === -1 ? favorites.length : dropIndex, 0, updatedEntry);
+
+      setLibrary({
+        ...library,
+        playing: replaceEntry(library.playing),
+        playedBefore: replaceEntry(library.playedBefore),
+        wantToPlay: replaceEntry(library.wantToPlay),
+        favorites,
+      });
+
+      await persist(async () => {
+        await apiFetch(`/library/${entry.id}`, { method: "PATCH", body: JSON.stringify({ isFavorite: true }) });
+        // The server puts a new favorite at the end, which is already right
+        // when it was dropped there.
+        if (dropIndex !== -1) await saveOrder("FAVORITES", favorites);
+      });
+      return;
+    }
+
+    // Anything else is a category: dropped on a card (that spot) or on the
+    // section itself (the end).
+    const overCard = findCardEntry(overId);
+    const targetCategory: Category | null = overCard ? overCard.category : overId in CATEGORY_KEYS ? (overId as Category) : null;
+    if (!targetCategory) return;
+
+    const sameCategory = entry.category === targetCategory;
+    if (sameCategory && !overCard) return;
+    if (overCard?.id === entry.id) return;
+
+    const updatedEntry: LibraryEntry = { ...entry, category: targetCategory };
+    const sourceKey = CATEGORY_KEYS[entry.category];
+    const targetKey = CATEGORY_KEYS[targetCategory];
+
+    let nextTarget: LibraryEntry[];
+    if (sameCategory) {
+      const list = library[targetKey];
+      nextTarget = arrayMove(
+        list,
+        list.findIndex((e) => e.id === entry.id),
+        list.findIndex((e) => e.id === overCard!.id),
+      );
+    } else {
+      nextTarget = [...library[targetKey]];
+      const dropIndex = overCard ? nextTarget.findIndex((e) => e.id === overCard.id) : nextTarget.length;
+      nextTarget.splice(dropIndex, 0, updatedEntry);
+    }
+
+    setLibrary({
+      ...library,
+      [sourceKey]: sameCategory ? library[sourceKey] : library[sourceKey].filter((e) => e.id !== entry.id),
+      [targetKey]: nextTarget,
+      favorites: library.favorites.map((e) => (e.id === entry.id ? updatedEntry : e)),
     });
 
-    try {
-      await apiFetch(`/library/${entry.id}`, { method: "PATCH", body: JSON.stringify({ category: newCategory }) });
-    } catch {
-      setLibrary(previousLibrary);
-    }
+    await persist(async () => {
+      if (!sameCategory) {
+        await apiFetch(`/library/${entry.id}`, { method: "PATCH", body: JSON.stringify({ category: targetCategory }) });
+      }
+      // The server puts a game that changed category at the end; save the
+      // order unless that's already where it was dropped.
+      if (sameCategory || overCard) await saveOrder(targetCategory, nextTarget);
+    });
   }
 
   if (!user || !library) {
@@ -137,7 +232,12 @@ export function HomePage() {
           </button>
         </div>
 
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={collisionDetection}
+          onDragStart={handleDragStart}
+          onDragEnd={(event) => void handleDragEnd(event)}
+        >
           <FavoritesRow
             favorites={library.favorites}
             onAddGame={() => setIsAddGameOpen(true)}
@@ -175,7 +275,14 @@ export function HomePage() {
             </div>
           )}
 
-          <DragOverlay>{activeEntry && <GameCard entry={activeEntry} onChanged={() => {}} />}</DragOverlay>
+          <DragOverlay>
+            {activeDrag &&
+              (activeDrag.kind === "favorite" ? (
+                <GameCover coverUrl={activeDrag.entry.game.coverUrl} title={activeDrag.entry.game.title} className="w-24 sm:w-28" />
+              ) : (
+                <GameCard entry={activeDrag.entry} onChanged={() => {}} />
+              ))}
+          </DragOverlay>
         </DndContext>
       </div>
 

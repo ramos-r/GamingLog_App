@@ -135,6 +135,16 @@ export interface SendFriendRequestResponse {
   friendshipId: string;
 }
 
+// A list whose order the user can change: one of the three categories, or the
+// Favorites row.
+export type OrderScope = Category | "FAVORITES";
+
+export interface ReorderLibraryInput {
+  scope: OrderScope;
+  // The whole list as it should now read, first to last.
+  ids: string[];
+}
+
 export interface AddToLibraryInput {
   gameId: string;
   category: Category;

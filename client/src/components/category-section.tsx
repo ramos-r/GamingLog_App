@@ -1,7 +1,8 @@
 import { useDroppable } from "@dnd-kit/core";
 import type { Category, LibraryEntry } from "shared";
-import { DraggableGameCard } from "./draggable-game-card";
+import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import { GameCard } from "./game-card";
+import { SortableGameCard } from "./sortable-game-card";
 
 interface CategorySectionProps {
   category: Category;
@@ -10,7 +11,8 @@ interface CategorySectionProps {
   emptyMessage: string;
   onAddGame?: () => void;
   onChanged?: () => void;
-  // Someone else's profile: not a drop target, plain cards, no add button.
+  // Someone else's profile: not a drop target or sortable, plain cards, no
+  // add button.
   readOnly?: boolean;
 }
 
@@ -42,15 +44,17 @@ export function CategorySection({
             </button>
           )
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {entries.map((entry) =>
-              readOnly ? (
-                <GameCard key={entry.id} entry={entry} readOnly />
-              ) : (
-                <DraggableGameCard key={entry.id} entry={entry} onChanged={onChanged} />
-              ),
-            )}
-          </div>
+          <SortableContext items={entries.map((entry) => entry.id)} strategy={rectSortingStrategy} disabled={readOnly}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {entries.map((entry) =>
+                readOnly ? (
+                  <GameCard key={entry.id} entry={entry} readOnly />
+                ) : (
+                  <SortableGameCard key={entry.id} entry={entry} onChanged={onChanged} />
+                ),
+              )}
+            </div>
+          </SortableContext>
         )}
       </div>
     </section>
