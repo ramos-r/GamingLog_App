@@ -6,6 +6,8 @@ and share that profile with friends.
 
 **Live:** https://gaming-log-app.vercel.app/
 
+**Demo profile (no login needed):** https://gaming-log-app.vercel.app/u/demo-user
+
 ## Features
 
 **Your library**
