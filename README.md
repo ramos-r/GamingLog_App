@@ -8,6 +8,11 @@ and share that profile with friends.
 
 **Demo profile (no login needed):** https://gaming-log-app.vercel.app/u/demo-user
 
+![Profile](docs/screenshot-profile.png)
+![Add game](docs/screenshot-add-game.png)
+
+Built with: React 19, TypeScript, Vite, Tailwind CSS 4, Node.js, Express 5, Prisma, PostgreSQL (Neon), IGDB API, Vercel.
+
 ## Features
 
 **Your library**
